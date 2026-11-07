@@ -1,0 +1,7 @@
+- insert:
+    - id: qq-chat-control
+      name: dsh-qq-chat/control
+    - id: qq-chat-runtime
+      name: dsh-qq-chat
+      config:
+        enabled: false

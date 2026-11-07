@@ -1,0 +1,59 @@
+{
+  "name": "dsh-qq-chat",
+  "version": "0.1.0",
+  "description": "Persistent, scoped DSH conversations over independently installed messaging providers.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": "^22.19.0 || >=24.0.0", "dsh": "0.2.2-rc.1" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./control": { "types": "./dist/control.d.ts", "import": "./dist/control.js" },
+    "./client": { "types": "./dist/client/index.d.ts", "default": "./dist/client.js" },
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": ["dist/**/*.js", "dist/**/*.d.ts", "cordis.patch.yml", "LICENSE", "README.md", "README.zh.md", "README.i18n.yaml", "docs/upgrade-guide/**/*.md", "docs/upgrade-guide/**/*.yaml"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" }, "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-api-gateway", "@deepseek-ai/dsh-client-locale", "@deepseek-ai/dsh-client-ui-renderer", "@deepseek-ai/dsh-client-ui-plugin-manager"] } },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/cordis-plugin-loader": "~1.1.0",
+    "@deepseek-ai/schemastery": "~3.19.0",
+    "dsh-im-kit": "0.2.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-agent-preset-registry": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-app-boot": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-brand": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-persistence": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-config-editor": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.1"
+  },
+  "dependencies": { "zod": "4.6.6" },
+  "devDependencies": {
+    "@deepseek-ai/dsh": "0.2.2-rc.1", "typescript": "5.9.3", "@types/node": "24.0.0", "@types/js-yaml": "4.0.9",
+    "@types/react": "18.3.28", "@types/react-dom": "18.3.7", "react": "18.3.1", "react-dom": "18.3.1", "esbuild": "0.28.2", "clsx": "2.1.1",
+    "@deepseek-ai/dsh-client-store": "0.2.2-rc.1", "@deepseek-ai/dsh-client-ui-layout": "0.2.2-rc.1", "@deepseek-ai/dsh-client-ui-settings": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-api-gateway": "0.2.2-rc.1", "@deepseek-ai/dsh-api-remotes": "0.2.2-rc.1", "@deepseek-ai/dsh-plugin-manager": "0.2.2-rc.1", "@deepseek-ai/dsh-plugin-market": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.2.2-rc.1", "@deepseek-ai/dsh-client-ui-slots": "0.2.2-rc.1", "@deepseek-ai/dsh-client-ui-renderer": "0.2.2-rc.1", "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.2-rc.1", "@deepseek-ai/dsh-client-ui-primitives": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-util-file-drag": "0.2.2-rc.1", "@shikijs/langs": "4.4.3", "@types/mdast": "4.0.4", "yaml": "2.9.1", "playwright": "1.65.0", "immer": "10.2.0", "zustand": "~4.5.7"
+  },
+  "overrides": { "zod": "4.6.6", "undici": "8.12.2", "fflate": "0.8.3", "@modelcontextprotocol/client": "2.3.0" },
+  "scripts": {
+    "prebuild": "node scripts/prepare-build.mjs",
+    "build": "tsc -p tsconfig.host.json && tsc -p tsconfig.client.json && node scripts/build-client.mjs",
+    "typecheck": "tsc -p tsconfig.host.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "verify:package": "node scripts/verify-package.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check": "npm run typecheck && npm test && node scripts/verify-package.mjs",
+    "test:native": "node scripts/integration/test-native.mjs",
+    "test:consumer": "node scripts/integration/test-consumer.mjs",
+    "test:web": "node scripts/integration/test-web.mjs",
+    "test:real-api": "node scripts/integration/test-real-api.mjs",
+    "prepack": "npm run build"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2023", "ESNext.Disposable", "DOM", "DOM.Iterable"],
+    "types": ["react", "react-dom"], "jsx": "react-jsx", "emitDeclarationOnly": true, "composite": true, "tsBuildInfoFile": "./dist/.client.tsbuildinfo"
+  },
+  "include": ["src/client/**/*.ts", "src/client/**/*.tsx", "src/config-fields.ts", "src/config-draft.ts", "src/control-types.ts", "src/control-codecs.ts", "src/outcomes.ts", "src/runtime-status.ts"]
+}

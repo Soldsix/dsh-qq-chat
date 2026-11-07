@@ -1,0 +1,43 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write README.md
+/:
+  en: 76281cfc16ef0228
+  zh: 79d14c58a98ec62d
+/dsh-qq-chat:
+  en: de7059c1ae6e53a4
+  zh: 92e013fb4e6bcb2b
+/dsh-qq-chat/summary:
+  en: b9ad9fe8dc72ae44
+  zh: 0a8ad045619bb85a
+/dsh-qq-chat/table-of-contents:
+  en: 582122955383e85e
+  zh: eb0f507d4e5afdea
+/dsh-qq-chat/use-this-package:
+  en: bbff250eba0f1b89
+  zh: 0a618f05cc88ee2b
+/dsh-qq-chat/use-this-package/install-and-configure:
+  en: 250619478a28d29b
+  zh: e7b39e1eab36ff82
+/dsh-qq-chat/use-this-package/try-without-qq:
+  en: 091af3bae6a4d45f
+  zh: 9bc3a4877d87d0de
+/dsh-qq-chat/use-this-package/tools-and-limits:
+  en: 4ebeefbb7441d6dc
+  zh: 487116bc55ed494f
+/dsh-qq-chat/persistence:
+  en: 90573492bbf3b555
+  zh: 39eedca0c13d5be6
+/dsh-qq-chat/understand-the-implementation:
+  en: 1e1e05943bfbb682
+  zh: 9ca36d031e3c76ef
+/dsh-qq-chat/model-experience:
+  en: 6dcf37d623080b61
+  zh: 96881d0ce1e6d335
+/dsh-qq-chat/known-limitations-and-deferred-work:
+  en: 55a1195bf6a0dec6
+  zh: d16a459b41ad809a
+/dsh-qq-chat/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: f9d48dd8cd7b4949
