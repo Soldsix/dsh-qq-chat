@@ -60,3 +60,21 @@ jobs:
       - run: npm run test:browser -- --with-deps
       - run: npm pack --pack-destination artifacts
       - run: npm run test:web
+  composition:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.x'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm pack --pack-destination artifacts
+      - run: npm run test:onebot

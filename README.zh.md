@@ -43,11 +43,12 @@ npm run check
 npm pack --pack-destination artifacts
 npm run test:native
 npm run test:consumer
+npm run test:onebot
 npm run test:browser
 npm run test:web
 ```
 
-Web 检查需要 Playwright 的 Chromium headless shell，先运行 `npm run test:browser`。这些检查使用隔离 profile、合成消息和捕获出站结果的端口，不向 QQ 发消息。可选的真实模型检查命令是 `npm run test:real-api -- --credential-store PATH_TO_EXISTING_MANAGED_CREDENTIAL_STORE`，要求库中已配置 `DEEPSEEK_API_KEY` 引用，并校验原凭据文件保持不变；不读取用户人设，也不注册消息提供方。
+Web 检查需要 Playwright 的 Chromium headless shell，先运行 `npm run test:browser`。这些检查使用隔离 profile、合成消息和捕获出站结果的端口，不向 QQ 发消息；OneBot 组合测试会安装已发布的通道，并让经过认证的回环数据帧实际经过两个插件。可选的真实模型检查命令是 `npm run test:real-api -- --credential-store PATH_TO_EXISTING_MANAGED_CREDENTIAL_STORE`，要求库中已配置 `DEEPSEEK_API_KEY` 引用，并校验原凭据文件保持不变；不读取用户人设，也不注册消息提供方。
 
 ### 不连接 QQ 试用
 

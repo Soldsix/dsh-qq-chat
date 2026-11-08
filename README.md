@@ -43,11 +43,12 @@ npm run check
 npm pack --pack-destination artifacts
 npm run test:native
 npm run test:consumer
+npm run test:onebot
 npm run test:browser
 npm run test:web
 ```
 
-Web checks require Playwright's Chromium headless shell: run `npm run test:browser` first. The checks use isolated profiles, synthetic traffic and a captured output port; they send no QQ messages. Optional live-model validation runs with `npm run test:real-api -- --credential-store PATH_TO_EXISTING_MANAGED_CREDENTIAL_STORE`; it requires a configured `DEEPSEEK_API_KEY` reference and verifies that the original credential file remains unchanged. It never reads a user persona or registers a messaging provider.
+Web checks require Playwright's Chromium headless shell: run `npm run test:browser` first. The checks use isolated profiles, synthetic traffic and a captured output port; they send no QQ messages. The OneBot composition test installs the released transport and sends authenticated loopback frames through both plugins. Optional live-model validation runs with `npm run test:real-api -- --credential-store PATH_TO_EXISTING_MANAGED_CREDENTIAL_STORE`; it requires a configured `DEEPSEEK_API_KEY` reference and verifies that the original credential file remains unchanged. It never reads a user persona or registers a messaging provider.
 
 ### Try without QQ
 

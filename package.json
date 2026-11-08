@@ -121,7 +121,8 @@
     "test:web": "node scripts/integration/test-web.mjs",
     "test:real-api": "node scripts/integration/test-real-api.mjs",
     "prepack": "npm run build && node scripts/prepare-pack.mjs",
-    "test:browser": "node scripts/integration/install-browser.mjs"
+    "test:browser": "node scripts/integration/install-browser.mjs",
+    "test:onebot": "node scripts/integration/test-onebot.mjs"
   },
   "repository": {
     "type": "git",
