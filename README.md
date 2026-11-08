@@ -39,7 +39,7 @@ Launch the profile through `dsh`. In the native Plugins page, open this bundle's
 
 Use **Local text preview** on the same page. It uses saved settings, native DSH agents and the normal journal/queue/output pipeline, captures outgoing public text locally, and never dispatches it through the messaging provider. Tools are always disabled in this preview. Its independent persistent conversation supports follow-ups; cancelling one preview does not cancel live conversations. The preview is a text check, not the full-chain media/tool laboratory.
 
-Live messaging optionally consumes `ctx.im` from an independently installed provider such as `dsh-qq-onebot`. Basic group triggers accept transport-confirmed addressing or recent same-sender follow-ups, according to configuration. Private and group scopes, accounts, presets, and preview/live traffic use separate mappings. Multi-person topic attribution and bot-loop control belong to the turn-control capability and are not claimed here.
+Live messaging optionally consumes `ctx.im` from an independently installed provider such as `dsh-qq-onebot`. Basic group triggers accept transport-confirmed addressing or recent same-sender follow-ups, according to configuration. An optional `qqTurnPolicy` provider may route or ignore otherwise unaddressed group messages; explicit addressing and private messages remain admitted. The original source is unchanged, and provider errors emit diagnostics before falling back to the basic policy. Private and group scopes, accounts, presets, and preview/live traffic use separate mappings. Multi-person topic attribution and bot-loop control remain incomplete.
 
 ### Tools and limits
 

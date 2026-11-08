@@ -13,6 +13,13 @@ export type RequestId=Branded<'qq-chat.request'>
 export type MappingId=Branded<'qq-chat.mapping'>
 /** Whether delivery reaches a transport or stays inside the local preview. */
 export type ChatMode='live'|'preview'
+/** Optional live routing provider; default leaves the built-in trigger unchanged. */
+export interface ChatTurnPolicy{
+  /** @param input - original source event. @param signal - delivery lifetime. @returns explicit decision or delegation to the built-in trigger. */
+  decide(input:InboundMessage,signal:AbortSignal):Promise<'reply'|'ignore'|'default'>
+  /** @param input - original source event. @param result - completed chat and delivery outcome. */
+  observe(input:InboundMessage,result:ChatResult):void
+}
 /** Logical outcome, independently carrying the transport receipt when one exists. */
 export interface ChatResult{
   readonly requestId:RequestId

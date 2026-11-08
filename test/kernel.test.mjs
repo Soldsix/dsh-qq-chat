@@ -28,6 +28,13 @@ test('one group reuses its Session for a same-sender followup and ignores unrela
  assert.equal(f.calls[1].map.lastDelivery,'accepted')
  assert.deepEqual(f.sent[1].parts,[{type:'reply',messageId:b.messageId},{type:'text',text:'reply 2'}])
 })
+test('optional policy routes an unaddressed message without changing its original source and never suppresses direct messages',async t=>{
+ const f=await fixture(t,{config:{trigger:'directed'}}),signal=new AbortController().signal,quoted=message('policy-1',{directed:false}),direct=message('policy-2')
+ assert.equal((await f.kernel.submit(quoted,'live',f.port,signal,'reply')).status,'responded')
+ assert.equal(f.calls[0].input.directedToBot,false)
+ assert.equal((await f.kernel.submit(direct,'live',f.port,signal,'ignore')).status,'responded')
+ assert.equal((await f.kernel.submit(message('policy-3',{directed:false}),'live',f.port,signal,'ignore')).reason,'not-directed')
+})
 test('different groups, private chats and account identities run independently under a global concurrency bound',async t=>{
  const f=await fixture(t,{config:{maxConcurrent:2},run:async()=>{await delay(20)}})
  const sources=[message('1'),message('1',{peer:'90000200'}),message('1',{kind:'private'}),message('1',{account:'90000003'})]

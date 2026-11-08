@@ -14,7 +14,7 @@ import {SqliteJournal} from './journal.ts'
 import {ChatKernel} from './kernel.ts'
 import {DshModelRunner} from './dsh-runner.ts'
 import {configRevision} from './config-revision.ts'
-import type {ChatResult} from './types.ts'
+import type {ChatResult,ChatTurnPolicy} from './types.ts'
 import type {PreviewId} from './control-types.ts'
 
 export {Config,resolveConfig}
@@ -41,7 +41,7 @@ export interface ChatService{
    */
   preview(text:string,signal:AbortSignal,previewId?:PreviewId):Promise<{result:ChatResult;outbound:readonly OutboundMessage[]}>
 }
-declare module '@deepseek-ai/cordis'{interface Context{readonly qqChat:ChatService}}
+declare module '@deepseek-ai/cordis'{interface Context{readonly qqChat:ChatService;readonly qqTurnPolicy:ChatTurnPolicy}}
 
 /**
  * Mount chat with an optional messaging provider and independent local preview.
@@ -72,6 +72,11 @@ export async function apply(ctx:Context,config:Settings):Promise<void>{
   ctx.effect(()=>ctx.provide('qqChat',service))
   ctx.inject(['im'],child=>{
     transportAttached=true;child.effect(()=>()=>{transportAttached=false})
-    child.effect(()=>child.im.subscribe(async(message,signal)=>{await kernel.submit(message,'live',child.im,signal)},()=>true))
+    child.effect(()=>child.im.subscribe(async(message,signal)=>{
+      const provider=child.get('qqTurnPolicy');let decision:'reply'|'ignore'|'default'='default'
+      if(provider&&message.scope.kind==='group'&&!message.directedToBot){try{decision=await provider.decide(message,signal)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}}
+      const result=await kernel.submit(message,'live',child.im,signal,decision)
+      if(provider&&child.get('qqTurnPolicy')===provider){try{provider.observe(message,result)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-observe',error})}catch(observerError){/* Diagnostics do not own the completed result. */}}}
+    },()=>true))
   })
 }

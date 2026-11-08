@@ -46,13 +46,13 @@ export class ChatKernel{
    * @param signal - caller cancellation joined with runtime lifetime.
    * @returns terminal model and delivery outcomes without automatic retry.
    */
-  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal):Promise<ChatResult>{
+  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default'):Promise<ChatResult>{
     const id=requestId(input,mode),digest=fingerprint(input)
     if(this.lifetime.signal.aborted||signal.aborted)return Promise.resolve(this.base(id,'cancelled','cancelled'))
     const existing=this.claims.get(id)
     if(existing)return Promise.resolve(this.base(id,existing.fingerprint===digest?'duplicate':'failed',existing.fingerprint===digest?null:'source-conflict'))
     const combined=AbortSignal.any([signal,this.lifetime.signal])
-    const result=this.admit(input,id,digest,mode,port,combined).catch(error=>{
+    const result=this.admit(input,id,digest,mode,port,combined,policy).catch(error=>{
       this.lastFailure=error instanceof StoreError?'storage/'+error.code:'runtime/failure'
       return this.base(id,combined.aborted?'cancelled':'failed',combined.aborted?'cancelled':'storage-unavailable')
     })
@@ -67,9 +67,10 @@ export class ChatKernel{
     if(saved){if(saved.scopeKey!==scope||saved.presetId!==preset||saved.mode!==mode||saved.sessionId!==sessionId(key))throw new StoreError('invalid-data');return saved}
     return{mappingId:key,scopeKey:scope,mode,presetId:preset,sessionId:sessionId(key),lastSenderId:null,lastReplyAt:0,lastDelivery:null,createdAt:Date.now()}
   }
-  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal):Promise<ChatResult>{
+  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'):Promise<ChatResult>{
     const lane=mappingId(this.config.namespace,input.scope,mode,'')
-    const direct=input.scope.kind==='private'||input.directedToBot
+    const direct=input.scope.kind==='private'||input.directedToBot||policy==='reply'
+    if(!direct&&policy==='ignore')return this.base(id,'ignored','not-directed')
     if(!direct){
       if(this.config.trigger!=='followup')return this.base(id,'ignored','not-directed')
       let contact=this.contacts.get(lane)
