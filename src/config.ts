@@ -12,6 +12,7 @@ export const Config:z<Config>=z.object({
   databasePath:z.string().default(''),workspacePath:z.string().default(''),presetId:z.string().default(''),
   provider:z.string().default(''),model:z.string().default(''),reasoningEffort:z.string().default(''),
   maxTokens:z.number().min(0).max(1048576).step(1).default(0),allowedTools:z.array(z.string()).default([]),
+  isolateGroupSenders:z.boolean().default(false),
   trigger:z.union([z.const('directed'),z.const('followup')]).default('followup'),
   followupWindowMs:z.number().min(0).max(3600000).step(1).default(60000),
   replyMode:z.union([z.const('quote'),z.const('mention'),z.const('plain')]).default('quote'),

@@ -24,7 +24,8 @@ const area=resumed?await realpath(args[resume+1]):await mkdtemp(join(runs,'web-i
 const owned=relative(runs,area);assert.ok(!owned.startsWith('..')&&!isAbsolute(owned),'Resume target must stay in this repository Web test directory')
 const attempt=await mkdtemp(join(area,'attempt-')),home=join(area,'home'),profile='qq-chat-web',profileRoot=join(home,'profiles',profile)
 const dsh=join(root,'node_modules','@deepseek-ai','dsh','lib','bin.js'),archives=[]
-for(const source of[library,join(root,'artifacts',manifest.name+'-'+manifest.version+'.tgz')]){
+const override=args.indexOf('--chat-archive'),chatArchive=override>=0?await realpath(args[override+1]):join(root,'artifacts',manifest.name+'-'+manifest.version+'.tgz')
+for(const source of[library,chatArchive]){
  const target=join(attempt,basename(source));await copyFile(source,target)
  archives.push({path:target,name:basename(target),sha256:createHash('sha256').update(await readFile(target)).digest('hex')})
 }
@@ -144,10 +145,13 @@ try{
   console.log(JSON.stringify({area,attempt,diagnostic:true,bytesUnchanged:result.bytesUnchanged,rebuiltEvents:hmr.filter(frame=>frame.type==='rebuilt').map(frame=>frame.id),clientErrors:errors,realQqMessagesSent:0}))
   assert.equal(result.bytesUnchanged,true);assert.ok(hmr.some(frame=>frame.type==='rebuilt'&&frame.id==='@deepseek-ai/dsh-client-ui-session'))
  }else{
+ const isolation=form.getByRole('switch',{name:/按群成员隔离模型会话|Separate group model sessions by sender/})
+ assert.equal(await isolation.getAttribute('aria-checked'),'false');await isolation.click()
  await form.getByRole('switch',{name:/启用自动聊天|Enable automatic chat/}).click()
  await form.getByRole('button',{name:/^保存并应用$|^Save and apply$/}).click()
  await form.getByText(/已保存配置正在运行|Saved settings are running/).waitFor()
  assert.equal(captures.length,0)
+ assert.equal(await isolation.getAttribute('aria-checked'),'true');checks.push('sender-session-isolation-enabled-in-native-page')
  checks.push('native-save-activates-without-qq-or-model-probe')
  await form.getByLabel(/^模型（空为沿用宿主）$|^Model \(empty: inherit\)$/).fill('')
  await form.getByRole('button',{name:/^保存并应用$|^Save and apply$/}).click()

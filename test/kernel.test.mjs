@@ -28,6 +28,31 @@ test('one group reuses its Session for a same-sender followup and ignores unrela
  assert.equal(f.calls[1].map.lastDelivery,'accepted')
  assert.deepEqual(f.sent[1].parts,[{type:'reply',messageId:b.messageId},{type:'text',text:'reply 2'}])
 })
+test('optional per-sender group sessions keep each member in a distinct persistent mapping',async t=>{
+ const f=await fixture(t,{config:{isolateGroupSenders:true}})
+ const a1=message('isolation-a1',{sender:'alice'}),b1=message('isolation-b1',{sender:'bob'}),a2=message('isolation-a2',{sender:'alice'})
+ const a=await f.submit(a1),b=await f.submit(b1),again=await f.submit(a2)
+ assert.equal(a.status,'responded');assert.equal(b.status,'responded');assert.equal(again.status,'responded')
+ assert.notEqual(a.sessionId,b.sessionId);assert.equal(a.sessionId,again.sessionId)
+ assert.equal((await f.store.mapping(f.calls[0].map.mappingId)).sessionId,a.sessionId)
+ const shared=await fixture(t),old=await shared.submit(message('isolation-shared',{sender:'alice'}))
+ assert.notEqual(old.sessionId,a.sessionId)
+})
+test('per-sender mapping is reused after journal and runtime restart',async t=>{
+ const f=await fixture(t,{config:{isolateGroupSenders:true}}),first=await f.submit(message('restart-a1',{sender:'alice'}))
+ await f.kernel.close()
+ const reopened=await SqliteJournal.open(f.options),calls=[]
+ const model={async resolvePreset(){return'qa'},async run(map,input){calls.push(map);return{sessionId:map.sessionId,text:'synthetic',fromOffset:0,toOffset:1,admitted:true,externalInput:false,completed:true}},async dispose(){}}
+ const kernel=new ChatKernel(resolveConfig(Config({enabled:true,isolateGroupSenders:true}),root),reopened,model)
+ t.after(()=>kernel.close())
+ const result=await kernel.submit(message('restart-a2',{sender:'alice'}),'live',f.port,new AbortController().signal)
+ assert.equal(result.status,'responded');assert.equal(result.sessionId,first.sessionId);assert.equal(calls[0].lastDelivery,'accepted')
+})
+test('per-sender setting retains the existing private conversation mapping',async t=>{
+ const shared=await fixture(t),isolated=await fixture(t,{config:{isolateGroupSenders:true}})
+ const a=await shared.submit(message('private-1',{kind:'private'})),b=await isolated.submit(message('private-2',{kind:'private'}))
+ assert.equal(a.sessionId,b.sessionId)
+})
 test('optional policy routes an unaddressed message without changing its original source and never suppresses direct messages',async t=>{
  const f=await fixture(t,{config:{trigger:'directed'}}),signal=new AbortController().signal,quoted=message('policy-1',{directed:false}),direct=message('policy-2')
  assert.equal((await f.kernel.submit(quoted,'live',f.port,signal,'reply')).status,'responded')
@@ -74,12 +99,14 @@ test('accepted-reply observation happens before a delayed durable finish and is 
  assert.deepEqual(notices,[])
 })
 test('different groups, private chats and account identities run independently under a global concurrency bound',async t=>{
- const f=await fixture(t,{config:{maxConcurrent:2},run:async()=>{await delay(20)}})
+ let release,entered;const gate=new Promise(resolve=>{release=resolve}),twoEntered=new Promise(resolve=>{entered=resolve});t.after(()=>release())
+ let count=0;const f=await fixture(t,{config:{maxConcurrent:2},run:async()=>{if(++count===2)entered();await gate}})
  const sources=[message('1'),message('1',{peer:'90000200'}),message('1',{kind:'private'}),message('1',{account:'90000003'})]
- const results=await Promise.all(sources.map(input=>f.submit(input)))
+ const pending=Promise.all(sources.map(input=>f.submit(input)))
+ const timeout=AbortSignal.timeout(30000);await Promise.race([twoEntered,new Promise((_,reject)=>timeout.addEventListener('abort',()=>reject(Error('Two model calls did not enter')),{once:true}))]);assert.equal(f.peak,2);release()
+ const results=await pending
  assert.ok(results.every(result=>result.status==='responded'))
  assert.equal(new Set(f.calls.map(call=>call.map.sessionId)).size,4)
- assert.equal(f.peak,2)
  assert.equal(f.sent.find(output=>output.scope.kind==='private').parts[0].type,'text')
 })
 test('a busy group yields its next slot to another waiting group',async t=>{

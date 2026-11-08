@@ -49,6 +49,7 @@ const reasonZh:Record<keyof typeof reasonEn,string>={
 export const en={
   ...reasonEn,
   intro:'Connect a messaging provider to durable DSH conversations. Local preview captures text here without sending to QQ.',
+  isolationHelp:'Separate group Sessions begin without shared history; switching back reuses the retained shared Session. Group replies remain public and tools require independent access checks.',
   behavior:'Reply behavior',model:'DSH model and preset',advanced:'Advanced storage and limits',
   save:'Save and apply',restart:'Restart saved configuration',refresh:'Refresh status',discard:'Discard changes',
   loading:'Loading chat configuration',loadFailed:'Configuration could not be loaded. Retry or check the control entry.',
@@ -77,6 +78,7 @@ export const en={
   'failure.cancelled':'The operation was cancelled. Refresh to check its state.',
   'field.enabled':'Enable automatic chat','field.namespace':'Data namespace','field.databasePath':'Database path (empty: profile-local)','field.workspacePath':'Neutral workspace (empty: profile-local)',
   'field.presetId':'DSH preset ID (empty: Host default)','field.provider':'Provider (empty: inherit)','field.model':'Model (empty: inherit)','field.reasoningEffort':'Thinking effort (empty: inherit)','field.maxTokens':'Output token cap (0: inherit)','field.allowedTools':'Allowed executable tools (one per line)',
+  'field.isolateGroupSenders':'Separate group model sessions by sender',
   'field.trigger':'Basic group trigger','field.followupWindowMs':'Same-sender follow-up window (ms)','field.replyMode':'Reply addressing','field.locale':'Failure notice language',
   'field.maxConcurrent':'Concurrent conversations','field.maxPending':'Maximum pending sources','field.maxPendingPerScope':'Pending sources per conversation','field.maxLiveSessions':'Maximum cached Sessions','field.sessionIdleMs':'Session idle eviction (ms)',
   'field.maxSourceAgeMs':'Source maximum age (ms)','field.maxInputChars':'Maximum input characters','field.maxReplyChars':'Maximum reply characters','field.queueTimeoutMs':'Queue wait limit (ms)','field.modelTimeoutMs':'Model interval limit (ms)','field.sendTimeoutMs':'Send wait limit (ms)',
@@ -90,6 +92,7 @@ export type LocaleKey=keyof typeof en
 export const zh:Record<LocaleKey,string>={
   ...reasonZh,
   intro:'把消息通道接入可持续的 DSH 对话。本地试用只在此处捕获文字，不向 QQ 发送',
+  isolationHelp:'开启后各成员使用新的独立群会话；切回共享模式会复用原有共享会话。群回复仍然公开，工具需另行验证访问权限。',
   behavior:'回复行为',model:'DSH 模型与预设',advanced:'高级存储与限制',
   save:'保存并应用',restart:'按已保存配置重启',refresh:'刷新状态',discard:'放弃修改',
   loading:'正在加载聊天配置',loadFailed:'配置暂时无法加载，请重试或检查控制条目',dirty:'有未保存的修改',stale:'编辑期间已保存配置发生了变化，请核对后再保存',
@@ -108,6 +111,7 @@ export const zh:Record<LocaleKey,string>={
   'failure.apply-failed':'配置未能应用，请核对已保存状态后再重试','failure.preview-active':'这次试用已经在执行','failure.preview-failed':'试用未完成，请检查运行状态','failure.cancelled':'操作已取消，请刷新确认状态',
   'field.enabled':'启用自动聊天','field.namespace':'数据命名空间','field.databasePath':'数据库路径（空为当前 profile）','field.workspacePath':'中性工作目录（空为当前 profile）',
   'field.presetId':'DSH 预设 ID（空为宿主默认）','field.provider':'提供方（空为沿用宿主）','field.model':'模型（空为沿用宿主）','field.reasoningEffort':'思考强度（空为沿用宿主）','field.maxTokens':'输出 Token 上限（0 为沿用宿主）','field.allowedTools':'允许执行的工具（每行一个）',
+  'field.isolateGroupSenders':'按群成员隔离模型会话',
   'field.trigger':'群聊基础触发条件','field.followupWindowMs':'同人连续追问窗口（ms）','field.replyMode':'回复寻址','field.locale':'失败提示语言',
   'field.maxConcurrent':'同时处理的会话数','field.maxPending':'待处理消息总数','field.maxPendingPerScope':'每个会话的待处理消息数','field.maxLiveSessions':'缓存会话上限','field.sessionIdleMs':'空闲会话释放时间（ms）',
   'field.maxSourceAgeMs':'来源消息最大年龄（ms）','field.maxInputChars':'输入字符上限','field.maxReplyChars':'回复字符上限','field.queueTimeoutMs':'排队等待上限（ms）','field.modelTimeoutMs':'模型处理上限（ms）','field.sendTimeoutMs':'发送等待上限（ms）',

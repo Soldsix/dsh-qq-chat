@@ -119,7 +119,7 @@ function ConfigurationPage({t,read,save,restart,preview,cancel,notify}:PropsLoca
       {error&&<span className="qqchat-field-error" role="alert">{t('failure.config-invalid')}</span>}
     </div>
   }
-  const behavior:readonly ConfigKey[]=['enabled','trigger','followupWindowMs','replyMode','locale']
+  const behavior:readonly ConfigKey[]=['enabled','isolateGroupSenders','trigger','followupWindowMs','replyMode','locale']
   const model:readonly ConfigKey[]=['presetId','provider','model','reasoningEffort','maxTokens','allowedTools']
   const advanced=Object.keys(CONFIG_FIELDS).filter(isConfigKey).filter(key=>!behavior.includes(key)&&!model.includes(key))
   const runtime=snapshot.runtime,services=Object.values(snapshot.services).every(Boolean)
@@ -136,7 +136,7 @@ function ConfigurationPage({t,read,save,restart,preview,cancel,notify}:PropsLoca
     {queryFailed&&<p className="qqchat-error" role="alert">{t('loadFailed')}</p>}
     <form onSubmit={event=>{event.preventDefault();void write('save')}}>
       {dirty&&<p className="qqchat-help" role="status">{snapshot.revision!==baseline.revision?t('stale'):t('dirty')}</p>}
-      <fieldset disabled={busy}><legend>{t('behavior')}</legend>{behavior.map(renderField)}</fieldset>
+      <fieldset disabled={busy}><legend>{t('behavior')}</legend>{behavior.map(renderField)}<p className="qqchat-help">{t('isolationHelp')}</p></fieldset>
       <fieldset disabled={busy}><legend>{t('model')}</legend>{model.map(renderField)}<p className="qqchat-help">{t('modelHelp')}</p></fieldset>
       <details><summary>{t('advanced')}</summary><fieldset disabled={busy}>{advanced.map(renderField)}<p className="qqchat-help">{t('storageHelp')}</p></fieldset></details>
       <div className="qqchat-actions">

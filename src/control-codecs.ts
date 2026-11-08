@@ -11,7 +11,7 @@ const previewId=z.pipe(z.string().check(z.regex(/^\w[\w-]{15,79}$/)),z.transform
 const nullableText=z.nullable(z.string()),reason=z.nullable(z.enum(REASONS))
 const config=z.strictObject({
   enabled:z.boolean(),namespace:z.string(),databasePath:z.string(),workspacePath:z.string(),presetId:z.string(),provider:z.string(),model:z.string(),reasoningEffort:z.string(),
-  maxTokens:integer,allowedTools:z.array(z.string()),trigger:z.enum(['directed','followup']),followupWindowMs:integer,replyMode:z.enum(['quote','mention','plain']),locale:z.enum(['zh','en']),
+  maxTokens:integer,allowedTools:z.array(z.string()),isolateGroupSenders:z.boolean(),trigger:z.enum(['directed','followup']),followupWindowMs:integer,replyMode:z.enum(['quote','mention','plain']),locale:z.enum(['zh','en']),
   maxConcurrent:integer,maxPending:integer,maxPendingPerScope:integer,maxLiveSessions:integer,sessionIdleMs:integer,maxSourceAgeMs:integer,maxInputChars:integer,maxReplyChars:integer,
   queueTimeoutMs:integer,modelTimeoutMs:integer,sendTimeoutMs:integer,storageTimeoutMs:integer,storageBusyMs:integer,storageStartupMs:integer,shutdownTimeoutMs:integer,
 } satisfies {[Key in keyof Config]:z.ZodMiniType<Config[Key]>})

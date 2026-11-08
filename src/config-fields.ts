@@ -10,6 +10,7 @@ export interface Config {
   reasoningEffort: string
   maxTokens: number
   allowedTools: string[]
+  isolateGroupSenders: boolean
   trigger: 'directed' | 'followup'
   followupWindowMs: number
   replyMode: 'quote' | 'mention' | 'plain'
@@ -35,7 +36,7 @@ export interface Config {
 export const CONFIG_FIELDS = {
   enabled:'boolean', namespace:'text', databasePath:'text', workspacePath:'text', presetId:'text',
   provider:'text', model:'text', reasoningEffort:'text', maxTokens:'number', allowedTools:'list',
-  trigger:'trigger', followupWindowMs:'number', replyMode:'reply', locale:'locale',
+  isolateGroupSenders:'boolean', trigger:'trigger', followupWindowMs:'number', replyMode:'reply', locale:'locale',
   maxConcurrent:'number', maxPending:'number', maxPendingPerScope:'number', maxLiveSessions:'number',
   sessionIdleMs:'number', maxSourceAgeMs:'number', maxInputChars:'number', maxReplyChars:'number',
   queueTimeoutMs:'number', modelTimeoutMs:'number', sendTimeoutMs:'number', storageTimeoutMs:'number',

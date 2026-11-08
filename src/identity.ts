@@ -1,7 +1,7 @@
 /** Deterministic request and mapping identities without interpreting content as authority. */
 import {createHash} from 'node:crypto'
 import {brandString} from '@deepseek-ai/dsh-brand'
-import {scopeKey,messageKey,type MessagePart,type InboundMessage,type ConversationScope} from 'dsh-im-kit'
+import {scopeKey,messageKey,type MessagePart,type InboundMessage,type ConversationScope,type UserId} from 'dsh-im-kit'
 import type {SessionId} from '@deepseek-ai/dsh-session'
 import type {ChatMode,RequestId,MappingId} from './types.ts'
 
@@ -38,9 +38,10 @@ export function fingerprint(message:InboundMessage):string{return hash([scopeKey
  * @param scope - authenticated conversation identity.
  * @param mode - live or preview mapping.
  * @param presetId - native resolved preset identity.
+ * @param senderId - authenticated sender when the group uses per-sender sessions.
  * @returns exact conversation/preset mapping identity.
  */
-export function mappingId(namespace:string,scope:ConversationScope,mode:ChatMode,presetId:string):MappingId{return brandString<MappingId>(hash([namespace,mode,scopeKey(scope),presetId]))}
+export function mappingId(namespace:string,scope:ConversationScope,mode:ChatMode,presetId:string,senderId?:UserId):MappingId{return brandString<MappingId>(hash(senderId===undefined?[namespace,mode,scopeKey(scope),presetId]:[namespace,mode,scopeKey(scope),presetId,'sender',senderId]))}
 /**
  * Derive a Session identity reusable after unloading the chat plugin.
  * @param mapping - exact conversation/preset identity.

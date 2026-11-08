@@ -25,7 +25,8 @@ assert.ok(!isAbsolute(areaRelative)&&!areaRelative.startsWith('..'),'Resume targ
 const attempt=await mkdtemp(join(area,'attempt-'))
 const home=join(area,'home'),profile='qq-chat-native',profileRoot=join(home,'profiles',profile)
 const archives=[]
-for(const path of [library,join(root,'artifacts',manifest.name+'-'+manifest.version+'.tgz')]){
+const override=args.indexOf('--chat-archive'),chatArchive=override>=0?await realpath(args[override+1]):join(root,'artifacts',manifest.name+'-'+manifest.version+'.tgz')
+for(const path of [library,chatArchive]){
  const name=path.split(/[\\/]/).at(-1),target=join(attempt,name);await copyFile(path,target)
  archives.push({path:target,name,sha256:createHash('sha256').update(await readFile(target)).digest('hex')})
 }
@@ -107,13 +108,20 @@ try{
   assert.equal(exitCode,undefined,'Native DSH exited before the probe');await delay(30)
  }
  assert.ok(result,'Native chat probe timed out');assert.equal(result.passed,true,JSON.stringify(result.error))
- assert.equal(captures.length,17)
+ assert.equal(captures.length,20)
  const text=value=>JSON.stringify(value.messages)
  assert.ok(text(captures[1]).includes('NATIVE_FIRST_QUESTION')&&text(captures[1]).includes('NATIVE_REPLY_1'))
  assert.ok(text(captures[2]).includes('NATIVE_FIRST_QUESTION')&&text(captures[2]).includes('NATIVE_AFTER_RELOAD'))
  for(const data of captures.filter(data=>/NATIVE_GROUP_TWO|NATIVE_GROUP_THREE|NATIVE_LOCAL_PREVIEW/.test(text(data))))assert.ok(!text(data).includes('NATIVE_FIRST_QUESTION'))
  const afterIdle=captures.find(data=>JSON.stringify(data.messages.at(-1)?.content).includes('NATIVE_AFTER_IDLE'))
  assert.ok(afterIdle&&text(afterIdle).includes('NATIVE_FIRST_QUESTION'))
+ const isolatedFirst=captures.find(data=>JSON.stringify(data.messages.at(-1)?.content).includes('NATIVE_ISOLATE_A_FIRST'))
+ const isolatedOther=captures.find(data=>JSON.stringify(data.messages.at(-1)?.content).includes('NATIVE_ISOLATE_B_FIRST'))
+ const isolatedAgain=captures.find(data=>JSON.stringify(data.messages.at(-1)?.content).includes('NATIVE_ISOLATE_A_AGAIN'))
+ assert.ok(isolatedFirst&&isolatedOther&&isolatedAgain)
+ assert.ok(!text(isolatedFirst).includes('NATIVE_FIRST_QUESTION'))
+ assert.ok(!text(isolatedOther).includes('NATIVE_ISOLATE_A_FIRST'))
+ assert.ok(text(isolatedAgain).includes('NATIVE_ISOLATE_A_FIRST')&&!text(isolatedAgain).includes('NATIVE_ISOLATE_B_FIRST'))
  assert.ok(peak>=2)
  child.stdin.write(JSON.stringify({jsonrpc:'2.0',id:1,method:'shutdown',params:{}})+'\n')
  const stopped=await Promise.race([exit,delay(15000).then(()=>{throw Error('Native shutdown did not settle')})])

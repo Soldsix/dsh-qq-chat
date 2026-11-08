@@ -67,7 +67,7 @@ export class ChatKernel{
   }
 
   private async loadMapping(input:InboundMessage,mode:ChatMode):Promise<MappingRecord>{
-    const preset=await this.model.resolvePreset(),key=mappingId(this.config.namespace,input.scope,mode,preset)
+    const preset=await this.model.resolvePreset(),sender=this.config.isolateGroupSenders&&input.scope.kind==='group'?input.senderId:undefined,key=mappingId(this.config.namespace,input.scope,mode,preset,sender)
     const saved=await this.journal.mapping(key),scope=scopeKey(input.scope)
     if(saved){if(saved.scopeKey!==scope||saved.presetId!==preset||saved.mode!==mode||saved.sessionId!==sessionId(key))throw new StoreError('invalid-data');return saved}
     return{mappingId:key,scopeKey:scope,mode,presetId:preset,sessionId:sessionId(key),lastSenderId:null,lastReplyAt:0,lastDelivery:null,createdAt:Date.now()}
