@@ -35,6 +35,30 @@ test('optional policy routes an unaddressed message without changing its origina
  assert.equal((await f.kernel.submit(direct,'live',f.port,signal,'ignore')).status,'responded')
  assert.equal((await f.kernel.submit(message('policy-3',{directed:false}),'live',f.port,signal,'ignore')).reason,'not-directed')
 })
+test('routing runs after durable admission once per source and never for stale or conflicting replays',async t=>{
+ const f=await fixture(t,{config:{trigger:'directed'}}),signal=new AbortController().signal,source=message('route-1',{directed:false}),seen=[]
+ let release,entered;const wait=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{entered=resolve})
+ t.after(()=>release())
+ const routing=async input=>{seen.push(input);entered();await wait;return'reply'}
+ const first=f.kernel.submit(source,'live',f.port,signal,'default',undefined,routing)
+ await started
+ assert.equal((await f.kernel.submit(source,'live',f.port,signal,'default',undefined,routing)).status,'duplicate')
+ assert.equal((await f.kernel.submit({...source,parts:[{type:'text',text:'changed'}]},'live',f.port,signal,'default',undefined,routing)).reason,'source-conflict')
+ release();assert.equal((await first).status,'responded')
+ assert.equal((await f.kernel.submit(source,'live',f.port,signal,'default',undefined,routing)).status,'duplicate')
+ const old=message('route-old',{directed:false,override:{sentAt:1,receivedAt:1}})
+ assert.equal((await f.kernel.submit(old,'live',f.port,signal,'default',undefined,routing)).reason,'stale')
+ assert.equal(seen.length,1);assert.equal(f.calls.length,1);assert.equal(f.sent.length,1)
+ assert.deepEqual((await f.store.receipt((await f.kernel.submit(old,'live',f.port,signal)).requestId)).input,old)
+})
+test('routing records ignored sources and cannot suppress an explicit mention',async t=>{
+ const f=await fixture(t,{config:{trigger:'directed'}}),signal=new AbortController().signal,route=async()=> 'ignore'
+ const ignored=message('route-ignore',{directed:false}),direct=message('route-direct')
+ const result=await f.kernel.submit(ignored,'live',f.port,signal,'default',undefined,route)
+ assert.equal(result.reason,'not-directed');assert.deepEqual((await f.store.receipt(result.requestId)).input,ignored)
+ assert.equal((await f.kernel.submit(direct,'live',f.port,signal,'default',undefined,route)).status,'responded')
+ assert.equal(f.calls.length,1)
+})
 test('accepted-reply observation happens before a delayed durable finish and is never invoked for failure notices',async t=>{
  let release,entered;const hold=new Promise(resolve=>{release=resolve}),blocked=new Promise(resolve=>{entered=resolve}),observed=[]
  t.after(()=>release())

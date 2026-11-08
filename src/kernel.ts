@@ -18,6 +18,7 @@ interface Task{
 }
 interface Lane{readonly tasks:Task[];running:boolean}
 interface Contact{readonly senderId:UserId;readonly at:number}
+type Routing=(input:InboundMessage,signal:AbortSignal)=>Promise<'reply'|'ignore'|'default'>
 /** Orchestration is shared by actual transport and explicitly isolated text preview. */
 export class ChatKernel{
   private readonly lifetime=new AbortController()
@@ -47,15 +48,16 @@ export class ChatKernel{
    * @param signal - caller cancellation joined with runtime lifetime.
    * @param policy - optional routing decision for an unaddressed group source.
    * @param accepted - synchronous observation of a completed model reply accepted by the transport, before journal completion.
+   * @param routing - optional group routing invoked only after durable source admission and age validation.
    * @returns terminal model and delivery outcomes without automatic retry.
    */
-  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default',accepted?: (result:ChatResult)=>void):Promise<ChatResult>{
+  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default',accepted?: (result:ChatResult)=>void,routing?:Routing):Promise<ChatResult>{
     const id=requestId(input,mode),digest=fingerprint(input)
     if(this.lifetime.signal.aborted||signal.aborted)return Promise.resolve(this.base(id,'cancelled','cancelled'))
     const existing=this.claims.get(id)
     if(existing)return Promise.resolve(this.base(id,existing.fingerprint===digest?'duplicate':'failed',existing.fingerprint===digest?null:'source-conflict'))
     const combined=AbortSignal.any([signal,this.lifetime.signal])
-    const result=this.admit(input,id,digest,mode,port,combined,policy,accepted).catch(error=>{
+    const result=this.admit(input,id,digest,mode,port,combined,policy,accepted,routing).catch(error=>{
       this.lastFailure=error instanceof StoreError?'storage/'+error.code:'runtime/failure'
       return this.base(id,combined.aborted?'cancelled':'failed',combined.aborted?'cancelled':'storage-unavailable')
     })
@@ -70,19 +72,20 @@ export class ChatKernel{
     if(saved){if(saved.scopeKey!==scope||saved.presetId!==preset||saved.mode!==mode||saved.sessionId!==sessionId(key))throw new StoreError('invalid-data');return saved}
     return{mappingId:key,scopeKey:scope,mode,presetId:preset,sessionId:sessionId(key),lastSenderId:null,lastReplyAt:0,lastDelivery:null,createdAt:Date.now()}
   }
-  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default',accepted:((result:ChatResult)=>void)|undefined):Promise<ChatResult>{
+  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default',accepted:((result:ChatResult)=>void)|undefined,routing:Routing|undefined):Promise<ChatResult>{
     const lane=mappingId(this.config.namespace,input.scope,mode,'')
-    const direct=input.scope.kind==='private'||input.directedToBot||policy==='reply'
-    if(!direct&&policy==='ignore')return this.base(id,'ignored','not-directed')
-    if(!direct){
-      if(this.config.trigger!=='followup')return this.base(id,'ignored','not-directed')
+    const shouldReply=async(decision:'reply'|'ignore'|'default'):Promise<boolean>=>{
+      if(input.scope.kind==='private'||input.directedToBot||decision==='reply')return true
+      if(decision==='ignore')return false
+      if(this.config.trigger!=='followup')return false
       let contact=this.contacts.get(lane)
       if(!contact){
         const map=await this.loadMapping(input,mode)
         if(map.lastSenderId)contact={senderId:map.lastSenderId,at:map.lastReplyAt}
       }
-      if(!contact||contact.senderId!==input.senderId||Date.now()-contact.at>this.config.followupWindowMs)return this.base(id,'ignored','not-directed')
+      return Boolean(contact&&contact.senderId===input.senderId&&Date.now()-contact.at<=this.config.followupWindowMs)
     }
+    if(!routing&&!await shouldReply(policy))return this.base(id,'ignored','not-directed')
     if(signal.aborted)return this.base(id,'cancelled','cancelled')
     const claimed=await this.journal.claim({requestId:id,scopeKey:scopeKey(input.scope),fingerprint:digest,mode,phase:'queued',input,updatedAt:Date.now(),sessionId:null,result:null})
     if(claimed!=='created')return this.base(id,claimed==='duplicate'?'duplicate':'failed',claimed==='duplicate'?null:'source-conflict')
@@ -90,6 +93,12 @@ export class ChatKernel{
     if(signal.aborted)return terminal(this.base(id,'cancelled','cancelled'))
     const now=Date.now(),sourceTime=input.sentAt>0?Math.min(input.sentAt,input.receivedAt):input.receivedAt
     if(now-sourceTime>this.config.maxSourceAgeMs)return terminal(this.base(id,'ignored','stale'))
+    if(routing){
+      policy=await routing(input,signal)
+      if(signal.aborted)return terminal(this.base(id,'cancelled','cancelled'))
+      if(Date.now()-sourceTime>this.config.maxSourceAgeMs)return terminal(this.base(id,'ignored','stale'))
+      if(!await shouldReply(policy))return terminal(this.base(id,'ignored','not-directed'))
+    }
     let availability:Awaited<ReturnType<DeliveryPort['availability']>>
     try{availability=await port.availability(input.scope,AbortSignal.any([signal,AbortSignal.timeout(this.config.sendTimeoutMs)]))}catch(error){availability='offline'}
     if(availability!=='available')return terminal(this.base(id,'ignored',availability==='muted'?'muted':availability==='disabled'?'disabled':'offline'))

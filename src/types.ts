@@ -15,7 +15,9 @@ export type MappingId=Branded<'qq-chat.mapping'>
 export type ChatMode='live'|'preview'
 /** Optional live routing provider; default leaves the built-in trigger unchanged. */
 export interface ChatTurnPolicy{
-  /** @param input - original source event. @param signal - delivery lifetime. @returns explicit decision or delegation to the built-in trigger. */
+  /** @param input - original group source before routing; implementations must bound any retained context. */
+  seen?(input:InboundMessage):void
+  /** @param input - original source event. @param signal - routing deadline and delivery lifetime; stop owned work when aborted. @returns explicit decision or delegation to the built-in trigger. */
   decide(input:InboundMessage,signal:AbortSignal):Promise<'reply'|'ignore'|'default'>
   /** @param input - original source event. @param result - chat outcome; accepted replies may be observed before durable finalization. */
   observe(input:InboundMessage,result:ChatResult):void

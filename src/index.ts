@@ -14,6 +14,7 @@ import {SqliteJournal} from './journal.ts'
 import {ChatKernel} from './kernel.ts'
 import {DshModelRunner} from './dsh-runner.ts'
 import {configRevision} from './config-revision.ts'
+import {routingDeadline} from './routing-deadline.ts'
 import type {ChatResult,ChatTurnPolicy} from './types.ts'
 import type {PreviewId} from './control-types.ts'
 
@@ -73,11 +74,22 @@ export async function apply(ctx:Context,config:Settings):Promise<void>{
   ctx.inject(['im'],child=>{
     transportAttached=true;child.effect(()=>()=>{transportAttached=false})
     child.effect(()=>child.im.subscribe(async(message,signal)=>{
-      const provider=child.get('qqTurnPolicy');let decision:'reply'|'ignore'|'default'='default'
-      if(provider&&message.scope.kind==='group'&&!message.directedToBot){try{decision=await provider.decide(message,signal)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}}
+      const provider=child.get('qqTurnPolicy')
+      const routing=provider&&message.scope.kind==='group'?async(_input:typeof message,routingSignal:AbortSignal)=>{
+        if(routingSignal.aborted||child.get('qqTurnPolicy')!==provider)return'default' as const
+        try{provider.seen?.(message)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-seen',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}
+        if(message.directedToBot||routingSignal.aborted)return'default' as const
+        try{
+          return await routingDeadline(routingSignal,spec.queueTimeoutMs,async deadline=>{
+            if(await child.im.availability(message.scope,AbortSignal.any([deadline,AbortSignal.timeout(spec.sendTimeoutMs)]))==='available'&&!deadline.aborted&&child.get('qqTurnPolicy')===provider)return provider.decide(message,deadline)
+            return'default'
+          })
+        }catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}
+        return'default' as const
+      }:undefined
       let observed=false
       const observe=(result:ChatResult)=>{if(provider&&child.get('qqTurnPolicy')===provider){try{provider.observe(message,result);observed=true}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-observe',error})}catch(observerError){/* Diagnostics do not own the completed result. */}}}}
-      const result=await kernel.submit(message,'live',child.im,signal,decision,observe)
+      const result=await kernel.submit(message,'live',child.im,signal,'default',observe,routing)
       if(!observed)observe(result)
     },()=>true))
   })
