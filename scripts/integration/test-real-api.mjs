@@ -4,20 +4,23 @@ import {createHash} from 'node:crypto'
 import {spawn} from 'node:child_process'
 import {once} from 'node:events'
 import {mkdtemp,mkdir,readFile,writeFile,realpath,copyFile} from 'node:fs/promises'
-import {join,basename} from 'node:path'
+import {join,basename,delimiter} from 'node:path'
 import {fileURLToPath,pathToFileURL} from 'node:url'
 import {setTimeout as delay} from 'node:timers/promises'
 import {verifyInstalledArchive} from './verify-installed.mjs'
+import {imKitArchive} from './inputs.mjs'
+import {pnpmScript} from './pnpm.mjs'
 const root=fileURLToPath(new URL('../../',import.meta.url)),args=process.argv
 const argument=name=>{const index=args.indexOf(name);assert.ok(index>=0&&args[index+1],'Required '+name);return args[index+1]}
-const library=await realpath(argument('--im-kit-archive')),credentialStore=await realpath(argument('--credential-store'))
+const library=await imKitArchive(),credentialStore=await realpath(argument('--credential-store'))
 const credentialHash=createHash('sha256').update(await readFile(credentialStore)).digest('hex')
 await mkdir(join(root,'.test-artifacts','real-api'),{recursive:true})
 const area=await mkdtemp(join(root,'.test-artifacts','real-api','run-')),home=join(area,'home'),profile='qq-chat-real-api',profileRoot=join(home,'profiles',profile)
 const manifest=JSON.parse(await readFile(join(root,'package.json'),'utf8')),dsh=join(root,'node_modules','@deepseek-ai','dsh','lib','bin.js'),archives=[]
 for(const source of[library,join(root,'artifacts',manifest.name+'-'+manifest.version+'.tgz')]){const path=join(area,basename(source));await copyFile(source,path);archives.push({path,name:basename(source),sha256:createHash('sha256').update(await readFile(path)).digest('hex')})}
 await writeFile(join(area,'inputs.json'),JSON.stringify(archives.map(({name,sha256})=>({name,sha256})),null,2)+'\n')
-const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!/KEY|SECRET|TOKEN|PASSWORD|DEEPSEEK_BASE_URL/i.test(key)))
+const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!/KEY|SECRET|TOKEN|PASSWORD|DEEPSEEK_BASE_URL/i.test(key)&&key.toUpperCase()!=='PATH'))
+Object.assign(env,{PATH:join(root,'node_modules','.bin')+delimiter+(process.env.PATH??process.env.Path??''),DSH_PRIMARY_RUNTIME:''})
 await mkdir(join(area,'temp'),{recursive:true});Object.assign(env,{TEMP:join(area,'temp'),TMP:join(area,'temp')})
 Object.assign(env,{DSH_HOME:home,DSH_SYSTEM_PROMPT:'Local synthetic acceptance conversation. No private persona or skills.'})
 const setup=[]
@@ -33,10 +36,8 @@ await run([dsh,'--profile',profile,'--from-default-profile','sdk','--dump-config
 const profileManifest=JSON.parse(await readFile(join(profileRoot,'package.json'),'utf8'));profileManifest.pnpm={...profileManifest.pnpm,overrides:manifest.overrides}
 await writeFile(join(profileRoot,'package.json'),JSON.stringify(profileManifest,null,2)+'\n')
 await writeFile(join(profileRoot,'.npmrc'),'package-import-method=copy\nstore-dir='+join(root,'.test-artifacts','pnpm-store').replaceAll('\\','/')+'\ncache-dir='+join(root,'.test-artifacts','pnpm-cache').replaceAll('\\','/')+'\n')
-let pnpm
-find:for(const dir of(process.env.PATH??'').split(';'))for(const candidate of[join(dir,'pnpm.cjs'),join(dir,'node_modules','pnpm','bin','pnpm.cjs'),join(dir,'node_modules','corepack','dist','pnpm.js')]){try{await realpath(candidate);pnpm=candidate;break find}catch(error){if(error.code!=='ENOENT')throw error}}
-assert.ok(pnpm,'pnpm is required')
-await run([pnpm,'add',archives[0].path,'@deepseek-ai/dsh@0.2.2-rc.1',...Object.entries(manifest.peerDependencies).filter(([name])=>name!=='dsh-im-kit').map(([name,version])=>name+'@'+version),'--ignore-scripts'],profileRoot)
+const pnpm=await pnpmScript(root)
+await run([pnpm,'add','@deepseek-ai/dsh@0.2.2-rc.1',...Object.entries(manifest.peerDependencies).filter(([name])=>name!=='dsh-im-kit').map(([name,version])=>name+'@'+version),'--ignore-scripts'],profileRoot)
 await run([dsh,'plugin','--profile',profile,'add',archives[1].path],area)
 await verifyInstalledArchive(archives[1].path,join(profileRoot,'node_modules','dsh-qq-chat'),join(area,'installed-files.json'))
 const overlay=[

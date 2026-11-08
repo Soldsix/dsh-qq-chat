@@ -6,7 +6,7 @@ import {verifyManifest,verifyPair,verifyFiles,verifyPortableText} from '../scrip
 test('package validation refuses local dependencies and application binaries',async()=>{
  const manifest=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'))
  verifyManifest(manifest)
- for(const invalid of[{...manifest,bin:{chat:'dist/index.js'}},{...manifest,dependencies:{zod:'file:../private'}},{...manifest,dsh:{bundle:{}}}])assert.throws(()=>verifyManifest(invalid))
+ for(const invalid of[{...manifest,bin:{chat:'dist/index.js'}},{...manifest,dependencies:{...manifest.dependencies,'dsh-im-kit':'^0.2.1'}},{...manifest,dependencies:{zod:'file:../private'}},{...manifest,dsh:{bundle:{}}}])assert.throws(()=>verifyManifest(invalid))
 })
 test('documentation and artifact checks refuse missing structure or private state',async()=>{
  const english=await readFile(new URL('../README.md',import.meta.url),'utf8'),chinese=await readFile(new URL('../README.zh.md',import.meta.url),'utf8')

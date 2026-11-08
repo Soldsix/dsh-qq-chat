@@ -25,15 +25,29 @@ Keep messaging conversations across DSH restarts, process separate conversations
 
 ### Install and configure
 
-Use DSH **0.2.2-rc.1**, Cordis 4.1, Node **^22.19 or >=24**, and the independent **dsh-im-kit 0.2.0** library. The tested Host and profile dependencies belong to the same DSH installation. Mixed physical installations are not supported by this candidate: this DSH prerelease uses package-local identities for preset scopes. DSH owns model credentials, presets, agents and Session persistence; none are copied into this package.
+Use DSH **0.2.2-rc.1**, Cordis 4.1, Node **^22.19 or >=24**, and the independent **dsh-im-kit 0.2.1** library. The tested Host and profile dependencies belong to the same DSH installation. Mixed physical installations are not supported by this candidate: this DSH prerelease uses package-local identities for preset scopes. DSH owns model credentials, presets, agents and Session persistence; none are copied into this package.
 
-The package is a local release candidate, not a registry release. Given its tarball and an existing profile with the prerequisites installed, the verified bundle operation is:
+Install into an existing DSH profile. The pinned messaging library is fetched automatically from its public GitHub release; no prior library installation is required:
 
 ```text
-dsh plugin --profile <profile> add <path-to-dsh-qq-chat-0.1.0.tgz>
+dsh plugin --profile MY_PROFILE add https://github.com/Soldsix/dsh-qq-chat/releases/download/v0.2.1/dsh-qq-chat-0.2.1.tgz
 ```
 
 Launch the profile through `dsh`. In the native Plugins page, open this bundle's configuration page, choose a preset and model or inherit the Host selection, then enable chat and save. The page reports saved and running revisions separately. Invalid edits retain the draft; restarting retains the journal and Session mappings. The controller remains available when automatic chat is disabled. No standalone application binary or separate settings server is provided.
+
+### Run isolated checks
+
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+npm run check
+npm pack --pack-destination artifacts
+npm run test:native
+npm run test:consumer
+npm run test:browser
+npm run test:web
+```
+
+Web checks require Playwright's Chromium headless shell: run `npm run test:browser` first. The checks use isolated profiles, synthetic traffic and a captured output port; they send no QQ messages. Optional live-model validation runs with `npm run test:real-api -- --credential-store PATH_TO_EXISTING_MANAGED_CREDENTIAL_STORE`; it requires a configured `DEEPSEEK_API_KEY` reference and verifies that the original credential file remains unchanged. It never reads a user persona or registers a messaging provider.
 
 ### Try without QQ
 
@@ -83,8 +97,8 @@ The selected preset loads through the native preset registry. A logged user mess
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- Controlled native-adapter tests and native Web tests cover installation, cancellation, scoped tool execution, reload and persistence. A real DeepSeek API smoke covers text, recall and arithmetic only. These are not comparative model-quality results or real QQ-client verification.
-- Windows is the locally verified platform. Linux CI, real QQ delivery, media adapters, advanced turn-control and the complete offline lab are not verified by this candidate.
+- Controlled native-adapter tests and native Web tests cover installation, cancellation, scoped tool execution, reload and persistence. The optional real DeepSeek API smoke checks only text, recall and arithmetic with an explicitly selected managed credential store. These are not comparative model-quality results or real QQ-client verification.
+- The CI matrix checks Windows and Linux with synthetic traffic. Real QQ client delivery, media adapters, advanced turn-control and the complete offline lab require separate verification.
 - DSH 0.2.2-rc.1 can blank its Web UI while hot-replacing core Session UI modules. A sibling pnpm installation can trigger replacement by changing only shared hard-link status times. Isolated tests use copied dependencies. Concurrent mutation of shared core artifacts remains a Host limitation; this bundle does not patch the Host.
 - Common local-path, private-endpoint and credential-format detection is a limited output check; it does not prove prevention of every possible disclosure. Status does not expose chat or preset bodies.
 - SQLite is an experimental Node module in the tested engines. A live database owner is never displaced; after an unclean worker failure, a Host restart may be required. Sources remain local and are not encrypted by this package; protect the profile directory.

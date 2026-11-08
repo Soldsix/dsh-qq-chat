@@ -18,17 +18,20 @@
   en: bbff250eba0f1b89
   zh: 0a618f05cc88ee2b
 /dsh-qq-chat/use-this-package/install-and-configure:
-  en: 250619478a28d29b
-  zh: e7b39e1eab36ff82
+  en: d0ffc4c9380eedcc
+  zh: 1c7637627b2ca24d
+/dsh-qq-chat/use-this-package/run-isolated-checks:
+  en: edd15315971a088b
+  zh: bf32c76ccaeb4461
 /dsh-qq-chat/use-this-package/try-without-qq:
-  en: a2e2061acfce13b6
-  zh: 6b3b76da8c1082d3
+  en: c79599df9fe63d23
+  zh: f3a9b84c03fee7bf
 /dsh-qq-chat/use-this-package/tools-and-limits:
   en: 4ebeefbb7441d6dc
   zh: 487116bc55ed494f
 /dsh-qq-chat/persistence:
-  en: 90573492bbf3b555
-  zh: 39eedca0c13d5be6
+  en: 8d7a9ec88c33929b
+  zh: 91a219a46993afbf
 /dsh-qq-chat/understand-the-implementation:
   en: 1e1e05943bfbb682
   zh: 9ca36d031e3c76ef
@@ -36,8 +39,8 @@
   en: 6dcf37d623080b61
   zh: 96881d0ce1e6d335
 /dsh-qq-chat/known-limitations-and-deferred-work:
-  en: 55a1195bf6a0dec6
-  zh: d16a459b41ad809a
+  en: ce7c580abf0ab7ce
+  zh: c0c66a6b1caba2b0
 /dsh-qq-chat/known-limitations-and-deferred-work/dev-note:
   en: e67f633dc6fe7773
   zh: f9d48dd8cd7b4949

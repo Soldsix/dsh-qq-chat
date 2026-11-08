@@ -2,13 +2,14 @@
 import assert from 'node:assert/strict'
 import {spawn} from 'node:child_process'
 import {mkdtemp,mkdir,readFile,writeFile,copyFile,realpath} from 'node:fs/promises'
-import {join,resolve,relative,isAbsolute,basename} from 'node:path'
+import {join,resolve,relative,isAbsolute,basename,delimiter} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import ts from 'typescript'
 import {verifyInstalledArchive} from './verify-installed.mjs'
-const root=fileURLToPath(new URL('../../',import.meta.url)),args=process.argv,index=args.indexOf('--im-kit-archive')
-assert.ok(index>=0&&args[index+1],'Pass --im-kit-archive PATH');assert.ok(process.env.npm_execpath,'Run through npm run test:consumer')
-const manifest=JSON.parse(await readFile(join(root,'package.json'),'utf8')),library=await realpath(args[index+1])
+import {imKitArchive} from './inputs.mjs'
+const root=fileURLToPath(new URL('../../',import.meta.url)),args=process.argv
+assert.ok(process.env.npm_execpath,'Run through npm run test:consumer')
+const manifest=JSON.parse(await readFile(join(root,'package.json'),'utf8')),library=await imKitArchive()
 const runs=join(root,'.test-artifacts','consumer');await mkdir(runs,{recursive:true})
 const resume=args.indexOf('--resume-run'),resumed=resume>=0
 const area=resumed?await realpath(args[resume+1]):await mkdtemp(join(runs,'run-'))
@@ -16,7 +17,8 @@ const owned=relative(runs,area);assert.ok(!owned.startsWith('..')&&!isAbsolute(o
 const attempt=await mkdtemp(join(area,'attempt-')),archives=[]
 for(const path of[library,join(root,'artifacts',manifest.name+'-'+manifest.version+'.tgz')]){const target=join(attempt,basename(path));await copyFile(path,target);archives.push(target)}
 if(!resumed)await writeFile(join(area,'package.json'),JSON.stringify({name:'isolated-qq-chat-consumer',private:true,type:'module',overrides:manifest.overrides},null,2)+'\n')
-const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!/KEY|SECRET|TOKEN|PASSWORD/i.test(key)))
+const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!/KEY|SECRET|TOKEN|PASSWORD/i.test(key)&&key.toUpperCase()!=='PATH'))
+Object.assign(env,{PATH:join(root,'node_modules','.bin')+delimiter+(process.env.PATH??process.env.Path??''),DSH_PRIMARY_RUNTIME:''})
 await mkdir(join(attempt,'temp'),{recursive:true});Object.assign(env,{TEMP:join(attempt,'temp'),TMP:join(attempt,'temp')})
 const records=[]
 async function run(argv){
@@ -29,7 +31,7 @@ async function run(argv){
  if(failure)throw failure;assert.equal(code,0,stderr.slice(-1800));return stdout
 }
 const peers=Object.entries(manifest.peerDependencies).filter(([name])=>name!=='dsh-im-kit').map(([name,version])=>name+'@'+version)
-if(!resumed||args.includes('--reinstall'))await run([process.env.npm_execpath,'install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--cache',join(root,'.npm-cache'),...archives,...peers,'@deepseek-ai/dsh@0.2.2-rc.1','@types/node@24.0.0','@types/react@18.3.28','@types/react-dom@18.3.7'])
+if(!resumed||args.includes('--reinstall'))await run([process.env.npm_execpath,'install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--cache',join(root,'.npm-cache'),archives[1],...peers,'@deepseek-ai/dsh@0.2.2-rc.1','@types/node@24.0.0','@types/react@18.3.28','@types/react-dom@18.3.7'])
 const installed=await verifyInstalledArchive(archives[1],join(area,'node_modules','dsh-qq-chat'),join(attempt,'installed-files.json'))
 const consumer=join(attempt,'consumer.ts')
 await writeFile(consumer,`import z from '@deepseek-ai/schemastery'

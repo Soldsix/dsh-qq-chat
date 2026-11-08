@@ -6,15 +6,16 @@ import {createServer} from 'node:http'
 import {createHash} from 'node:crypto'
 import {mkdtemp,mkdir,readFile,writeFile,realpath,copyFile,link,unlink,stat} from 'node:fs/promises'
 import {createWriteStream} from 'node:fs'
-import {join,relative,isAbsolute,basename} from 'node:path'
+import {join,relative,isAbsolute,basename,delimiter} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {setTimeout as delay} from 'node:timers/promises'
 import {verifyInstalledArchive} from './verify-installed.mjs'
+import {imKitArchive} from './inputs.mjs'
+import {pnpmScript} from './pnpm.mjs'
 import {fixtureMarker} from './fixture-marker.mjs'
 
 const root=fileURLToPath(new URL('../../',import.meta.url)),args=process.argv
-const input=args.indexOf('--im-kit-archive');assert.ok(input>=0&&args[input+1],'Pass --im-kit-archive PATH')
-const library=await realpath(args[input+1]),manifest=JSON.parse(await readFile(join(root,'package.json'),'utf8'))
+const library=await imKitArchive(),manifest=JSON.parse(await readFile(join(root,'package.json'),'utf8'))
 const cache=args.indexOf('--browser-cache')
 process.env.PLAYWRIGHT_BROWSERS_PATH=cache>=0?await realpath(args[cache+1]):process.env.PLAYWRIGHT_BROWSERS_PATH??join(root,'.test-artifacts','browsers')
 const {chromium}=await import('playwright')
@@ -49,7 +50,8 @@ const model=createServer(async(request,response)=>{
  }catch(error){if(!closed.signal.aborted)response.destroy(error)}finally{active--}
 })
 model.listen(0,'127.0.0.1');await once(model,'listening');model.unref()
-const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!/KEY|SECRET|TOKEN|PASSWORD/i.test(key)))
+const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!/KEY|SECRET|TOKEN|PASSWORD/i.test(key)&&key.toUpperCase()!=='PATH'))
+Object.assign(env,{PATH:join(root,'node_modules','.bin')+delimiter+(process.env.PATH??process.env.Path??''),DSH_PRIMARY_RUNTIME:''})
 await mkdir(join(attempt,'temp'),{recursive:true});Object.assign(env,{TEMP:join(attempt,'temp'),TMP:join(attempt,'temp')})
 Object.assign(env,{DSH_HOME:home,DSH_SYSTEM_PROMPT:'Synthetic Web integration fixture. No private persona or skills.',DEEPSEEK_API_KEY:'synthetic-loopback-only',DEEPSEEK_BASE_URL:'http://127.0.0.1:'+model.address().port+'/anthropic'})
 const installation=[]
@@ -70,11 +72,9 @@ const profileManifest=JSON.parse(await readFile(join(profileRoot,'package.json')
 profileManifest.pnpm={...profileManifest.pnpm,overrides:manifest.overrides}
 await writeFile(join(profileRoot,'package.json'),JSON.stringify(profileManifest,null,2)+'\n')
 await writeFile(join(profileRoot,'.npmrc'),'package-import-method=copy\nstore-dir='+join(root,'.test-artifacts','pnpm-store').replaceAll('\\','/')+'\ncache-dir='+join(root,'.test-artifacts','pnpm-cache').replaceAll('\\','/')+'\n')
-let pnpm
-find:for(const dir of(process.env.PATH??'').split(';'))for(const candidate of[join(dir,'pnpm.cjs'),join(dir,'node_modules','pnpm','bin','pnpm.cjs'),join(dir,'node_modules','corepack','dist','pnpm.js')]){try{await realpath(candidate);pnpm=candidate;break find}catch(error){if(error.code!=='ENOENT')throw error}}
-assert.ok(pnpm,'pnpm is required for an isolated profile')
+const pnpm=await pnpmScript(root)
 const peers=Object.entries(manifest.peerDependencies).filter(([name])=>name!=='dsh-im-kit').map(([name,version])=>name+'@'+version)
-await run(process.execPath,[pnpm,'add',archives[0].path,'@deepseek-ai/dsh@0.2.2-rc.1',...peers,'--ignore-scripts'],profileRoot)
+await run(process.execPath,[pnpm,'add','@deepseek-ai/dsh@0.2.2-rc.1',...peers,'--ignore-scripts'],profileRoot)
 await run(process.execPath,[dsh,'plugin','--profile',profile,'add',archives[1].path],area)
 const installedFiles=await verifyInstalledArchive(archives[1].path,join(profileRoot,'node_modules','dsh-qq-chat'),join(attempt,'installed-files.json'))
 const overlay=[

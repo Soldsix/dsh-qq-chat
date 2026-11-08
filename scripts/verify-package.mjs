@@ -11,7 +11,7 @@ export function verifyManifest(manifest){
  assert.equal(manifest.name,'dsh-qq-chat');assert.equal(manifest.type,'module');assert.equal(manifest.license,'MIT')
  assert.ok(!manifest.bin,'Only DSH profiles launch applications')
  assert.equal(manifest.engines?.dsh,'0.2.2-rc.1');assert.equal(manifest.dsh?.bundle?.patch,'./cordis.patch.yml')
- assert.equal(manifest.peerDependencies?.['dsh-im-kit'],'0.2.0')
+ assert.equal(manifest.dependencies?.['dsh-im-kit'],'https://github.com/Soldsix/dsh-im-kit/releases/download/v0.2.1/dsh-im-kit-0.2.1.tgz')
  assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis-plugin-loader'],'~1.1.0')
  assert.equal(manifest.exports?.['.']?.import,'./dist/index.js');assert.equal(manifest.exports?.['.']?.types,'./dist/index.d.ts')
  assert.equal(manifest.exports?.['./control']?.import,'./dist/control.js');assert.equal(manifest.exports?.['./client']?.default,'./dist/client.js')

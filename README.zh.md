@@ -25,15 +25,29 @@ kind: "package-bundle"
 
 ### 安装与配置
 
-使用 DSH **0.2.2-rc.1**、Cordis 4.1、Node **^22.19 或 >=24**，以及独立共用库 **dsh-im-kit 0.2.0**。已验证的宿主与 profile 依赖来自同一份 DSH 安装。本候选包不支持混合不同物理安装：该 DSH 预发布版本的预设作用域使用包内运行时标识。模型凭据、预设、agent 和会话持久化均由 DSH 管理，本包不复制它们。
+使用 DSH **0.2.2-rc.1**、Cordis 4.1、Node **^22.19 或 >=24**，以及独立共用库 **dsh-im-kit 0.2.1**。已验证的宿主与 profile 依赖来自同一份 DSH 安装。本候选包不支持混合不同物理安装：该 DSH 预发布版本的预设作用域使用包内运行时标识。模型凭据、预设、agent 和会话持久化均由 DSH 管理，本包不复制它们。
 
-本包是本地候选包，尚未发布到注册表。已有安装好上述依赖的 profile 与本包压缩包时，已验证的 bundle 操作为：
+在已有的 DSH profile 中安装。固定版本的共用消息库会自动从 GitHub 公开发行取得，不需要预装：
 
 ```text
-dsh plugin --profile <profile> add <path-to-dsh-qq-chat-0.1.0.tgz>
+dsh plugin --profile MY_PROFILE add https://github.com/Soldsix/dsh-qq-chat/releases/download/v0.2.1/dsh-qq-chat-0.2.1.tgz
 ```
 
 通过 `dsh` 启动该 profile。在原生插件页打开本 bundle 的配置页，选择预设与模型或沿用宿主选择，再启用聊天并保存。页面分别显示已保存版本与实际运行版本。无效编辑保留草稿；重启保留消息收据和会话映射；关闭自动聊天后控制页仍然可用。本包不提供独立应用程序入口或额外设置服务。
+
+### 运行隔离检查
+
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+npm run check
+npm pack --pack-destination artifacts
+npm run test:native
+npm run test:consumer
+npm run test:browser
+npm run test:web
+```
+
+Web 检查需要 Playwright 的 Chromium headless shell，先运行 `npm run test:browser`。这些检查使用隔离 profile、合成消息和捕获出站结果的端口，不向 QQ 发消息。可选的真实模型检查命令是 `npm run test:real-api -- --credential-store PATH_TO_EXISTING_MANAGED_CREDENTIAL_STORE`，要求库中已配置 `DEEPSEEK_API_KEY` 引用，并校验原凭据文件保持不变；不读取用户人设，也不注册消息提供方。
 
 ### 不连接 QQ 试用
 
@@ -83,8 +97,8 @@ dsh plugin --profile <profile> add <path-to-dsh-qq-chat-0.1.0.tgz>
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 受控原生适配器测试及原生 Web 测试覆盖安装、取消、作用域工具执行、重载与持久化；真实 DeepSeek API 冒烟只覆盖文字、记忆口令与算术。这些不等于模型能力对比或真实 QQ 客户端验收。
-- 本地验证平台为 Windows。Linux CI、真实 QQ 投送、媒体适配、复杂接话与完整离线实验室不在本候选包的已验证范围内。
+- 受控原生适配器测试及原生 Web 测试覆盖安装、取消、作用域工具执行、重载与持久化；可选的真实 DeepSeek API 冒烟使用明确指定的现有凭据库，只检查文字、记忆口令与算术。这些不等于模型能力对比或真实 QQ 客户端验收。
+- CI 矩阵使用合成消息检查 Windows 与 Linux。真实 QQ 客户端送达、媒体适配、复杂接话与完整离线实验室需分别验证。
 - DSH 0.2.2-rc.1 热替换核心会话 UI 模块时可能出现 Web 白屏。另一个 pnpm 安装操作即使只改变共享硬链接的文件状态时间，也可能触发替换。隔离测试使用独立文件副本。并发修改共享核心文件仍属于宿主限制，本 bundle 不修改宿主。
 - 常见本机路径、私有端点和密钥格式检测属于有限输出检查，不能证明阻止所有泄露方式。状态页不展示聊天或预设正文。
 - 测试 Node 版本中的 SQLite 仍是实验模块。活跃数据库所有者不会被强行取代；worker 非正常失败后可能需要重启宿主。来源数据留在本地，本包不加密它们，应保护 profile 目录。
