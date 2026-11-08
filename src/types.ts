@@ -17,7 +17,7 @@ export type ChatMode='live'|'preview'
 export interface ChatTurnPolicy{
   /** @param input - original source event. @param signal - delivery lifetime. @returns explicit decision or delegation to the built-in trigger. */
   decide(input:InboundMessage,signal:AbortSignal):Promise<'reply'|'ignore'|'default'>
-  /** @param input - original source event. @param result - completed chat and delivery outcome. */
+  /** @param input - original source event. @param result - chat outcome; accepted replies may be observed before durable finalization. */
   observe(input:InboundMessage,result:ChatResult):void
 }
 /** Logical outcome, independently carrying the transport receipt when one exists. */

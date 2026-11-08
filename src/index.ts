@@ -75,8 +75,10 @@ export async function apply(ctx:Context,config:Settings):Promise<void>{
     child.effect(()=>child.im.subscribe(async(message,signal)=>{
       const provider=child.get('qqTurnPolicy');let decision:'reply'|'ignore'|'default'='default'
       if(provider&&message.scope.kind==='group'&&!message.directedToBot){try{decision=await provider.decide(message,signal)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}}
-      const result=await kernel.submit(message,'live',child.im,signal,decision)
-      if(provider&&child.get('qqTurnPolicy')===provider){try{provider.observe(message,result)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-observe',error})}catch(observerError){/* Diagnostics do not own the completed result. */}}}
+      let observed=false
+      const observe=(result:ChatResult)=>{if(provider&&child.get('qqTurnPolicy')===provider){try{provider.observe(message,result);observed=true}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-observe',error})}catch(observerError){/* Diagnostics do not own the completed result. */}}}}
+      const result=await kernel.submit(message,'live',child.im,signal,decision,observe)
+      if(!observed)observe(result)
     },()=>true))
   })
 }

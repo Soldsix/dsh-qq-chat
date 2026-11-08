@@ -35,6 +35,20 @@ test('optional policy routes an unaddressed message without changing its origina
  assert.equal((await f.kernel.submit(direct,'live',f.port,signal,'ignore')).status,'responded')
  assert.equal((await f.kernel.submit(message('policy-3',{directed:false}),'live',f.port,signal,'ignore')).reason,'not-directed')
 })
+test('accepted-reply observation happens before a delayed durable finish and is never invoked for failure notices',async t=>{
+ let release,entered;const hold=new Promise(resolve=>{release=resolve}),blocked=new Promise(resolve=>{entered=resolve}),observed=[]
+ t.after(()=>release())
+ const f=await fixture(t,{wrapStore(store){
+  const wrapper={};for(const name of ['claim','receipt','start','prepareSend','mapping','saveMapping','stats','close'])wrapper[name]=store[name].bind(store)
+  wrapper.finish=async result=>{if(result.status==='responded'){entered();await hold}return store.finish(result)};return wrapper
+ }})
+ const pending=f.kernel.submit(message('receipt-1'),'live',f.port,new AbortController().signal,'default',result=>observed.push(result))
+ const timeout=AbortSignal.timeout(30000);await Promise.race([blocked,new Promise((_,reject)=>timeout.addEventListener('abort',()=>reject(Error('Durable finish barrier timed out')),{once:true}))]);assert.equal(observed.length,1);assert.equal(observed[0].receipt.status,'accepted');assert.equal(observed[0].modelOutcome,'completed')
+ release();assert.equal((await pending).status,'responded')
+ const failing=await fixture(t,{run:async()=>{throw Error('synthetic model error')}}),notices=[]
+ await failing.kernel.submit(message('receipt-2'),'live',failing.port,new AbortController().signal,'default',result=>notices.push(result))
+ assert.deepEqual(notices,[])
+})
 test('different groups, private chats and account identities run independently under a global concurrency bound',async t=>{
  const f=await fixture(t,{config:{maxConcurrent:2},run:async()=>{await delay(20)}})
  const sources=[message('1'),message('1',{peer:'90000200'}),message('1',{kind:'private'}),message('1',{account:'90000003'})]

@@ -12,6 +12,7 @@ export type {KernelStatus} from './runtime-status.ts'
 interface Task{
   readonly id:RequestId;readonly lane:MappingId;readonly input:InboundMessage;readonly mode:ChatMode
   readonly port:DeliveryPort;readonly signal:AbortSignal;readonly resolve:(result:ChatResult)=>void
+  readonly accepted:((result:ChatResult)=>void)|undefined
   running:boolean;settled:boolean;timer:ReturnType<typeof setTimeout>|null;abort:(()=>void)|null
   mapping:MappingRecord|null
 }
@@ -44,15 +45,17 @@ export class ChatKernel{
    * @param mode - live or isolated preview mapping.
    * @param port - availability and one-attempt delivery provider.
    * @param signal - caller cancellation joined with runtime lifetime.
+   * @param policy - optional routing decision for an unaddressed group source.
+   * @param accepted - synchronous observation of a completed model reply accepted by the transport, before journal completion.
    * @returns terminal model and delivery outcomes without automatic retry.
    */
-  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default'):Promise<ChatResult>{
+  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default',accepted?: (result:ChatResult)=>void):Promise<ChatResult>{
     const id=requestId(input,mode),digest=fingerprint(input)
     if(this.lifetime.signal.aborted||signal.aborted)return Promise.resolve(this.base(id,'cancelled','cancelled'))
     const existing=this.claims.get(id)
     if(existing)return Promise.resolve(this.base(id,existing.fingerprint===digest?'duplicate':'failed',existing.fingerprint===digest?null:'source-conflict'))
     const combined=AbortSignal.any([signal,this.lifetime.signal])
-    const result=this.admit(input,id,digest,mode,port,combined,policy).catch(error=>{
+    const result=this.admit(input,id,digest,mode,port,combined,policy,accepted).catch(error=>{
       this.lastFailure=error instanceof StoreError?'storage/'+error.code:'runtime/failure'
       return this.base(id,combined.aborted?'cancelled':'failed',combined.aborted?'cancelled':'storage-unavailable')
     })
@@ -67,7 +70,7 @@ export class ChatKernel{
     if(saved){if(saved.scopeKey!==scope||saved.presetId!==preset||saved.mode!==mode||saved.sessionId!==sessionId(key))throw new StoreError('invalid-data');return saved}
     return{mappingId:key,scopeKey:scope,mode,presetId:preset,sessionId:sessionId(key),lastSenderId:null,lastReplyAt:0,lastDelivery:null,createdAt:Date.now()}
   }
-  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'):Promise<ChatResult>{
+  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default',accepted:((result:ChatResult)=>void)|undefined):Promise<ChatResult>{
     const lane=mappingId(this.config.namespace,input.scope,mode,'')
     const direct=input.scope.kind==='private'||input.directedToBot||policy==='reply'
     if(!direct&&policy==='ignore')return this.base(id,'ignored','not-directed')
@@ -92,13 +95,13 @@ export class ChatKernel{
     if(availability!=='available')return terminal(this.base(id,'ignored',availability==='muted'?'muted':availability==='disabled'?'disabled':'offline'))
     const current=this.lanes.get(lane)
     if(this.queued+this.active>=this.config.maxPending||(current?.tasks.length??0)+(current?.running?1:0)>=this.config.maxPendingPerScope){
-      const task=this.makeTask(input,id,mode,port,signal,lane,()=>{})
+      const task=this.makeTask(input,id,mode,port,signal,lane,()=>{},accepted)
       return this.deliver(task,{...this.base(id,'failed','capacity'),reply:failureText('capacity',this.config.locale)})
     }
     this.contacts.delete(lane);this.contacts.set(lane,{senderId:input.senderId,at:now})
     while(this.contacts.size>this.config.maxLiveSessions){const oldest=this.contacts.keys().next().value;if(oldest!==undefined)this.contacts.delete(oldest)}
     return new Promise(resolve=>{
-      const task=this.makeTask(input,id,mode,port,signal,lane,resolve)
+      const task=this.makeTask(input,id,mode,port,signal,lane,resolve,accepted)
       const queue=current??{tasks:[],running:false};this.lanes.set(lane,queue);queue.tasks.push(task);this.queued++
       task.abort=()=>{if(!task.running)this.cancelQueued(task,'cancelled')}
       signal.addEventListener('abort',task.abort,{once:true})
@@ -107,7 +110,7 @@ export class ChatKernel{
       this.notify()
     })
   }
-  private makeTask(input:InboundMessage,id:RequestId,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,lane:MappingId,resolve:(result:ChatResult)=>void):Task{return{id,lane,input,mode,port,signal,resolve,running:false,settled:false,timer:null,abort:null,mapping:null}}
+  private makeTask(input:InboundMessage,id:RequestId,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,lane:MappingId,resolve:(result:ChatResult)=>void,accepted:((result:ChatResult)=>void)|undefined):Task{return{id,lane,input,mode,port,signal,resolve,accepted,running:false,settled:false,timer:null,abort:null,mapping:null}}
   private schedule(key:MappingId):void{const lane=this.lanes.get(key);if(lane&&!lane.running&&lane.tasks.length&&!this.readySet.has(key)){this.ready.push(key);this.readySet.add(key)}}
   private clear(task:Task):void{if(task.timer!==null)clearTimeout(task.timer);if(task.abort)task.signal.removeEventListener('abort',task.abort);task.timer=null;task.abort=null}
   private removeEmpty(key:MappingId):void{
@@ -180,6 +183,7 @@ export class ChatKernel{
     try{receipt=await task.port.send(outbound,AbortSignal.any([task.signal,AbortSignal.timeout(this.config.sendTimeoutMs)]))}
     catch(error){receipt={status:'uncertain',code:'provider-error'}}
     const result:ChatResult=receipt.status==='accepted'?{...base,receipt}:receipt.status==='uncertain'?{...base,status:'uncertain',reason:'delivery-uncertain',receipt}:{...base,status:receipt.code==='cancelled'?'cancelled':'failed',reason:receipt.code==='cancelled'?'cancelled':receipt.code==='muted'?'muted':receipt.code==='offline'?'offline':'delivery-rejected',receipt}
+    if(receipt.status==='accepted'&&result.status==='responded'&&result.modelOutcome==='completed'){try{task.accepted?.(result)}catch(error){this.lastFailure='policy/observation-failed'}}
     await this.journal.finish(result)
     if(task.mapping){
       const accepted=receipt.status==='accepted'
