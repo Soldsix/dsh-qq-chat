@@ -1,0 +1,81 @@
+{
+  "package": "dsh-qq-chat",
+  "version": "0.3.0-development",
+  "sourceCommit": "76b7ea2f8af5ad6846ad533230ebb0957c47c670",
+  "role": "native chat/source provider",
+  "archive": "dsh-qq-chat/artifacts/dsh-qq-chat-0.3.0-development.tgz",
+  "sha256": "6dcf820c19962ddca5c9f1be605886964ebc031c857671fd41a5483fd9a17e03",
+  "unitTestsPerNode": 45,
+  "ciRun": 42617660636,
+  "passedCiJobs": 11,
+  "jobs": [
+    {
+      "name": "web",
+      "conclusion": "success"
+    },
+    {
+      "name": "native (ubuntu-latest, 22.19.0)",
+      "conclusion": "success"
+    },
+    {
+      "name": "composition (windows-latest)",
+      "conclusion": "success"
+    },
+    {
+      "name": "native (windows-latest, 24.x)",
+      "conclusion": "success"
+    },
+    {
+      "name": "package (windows-latest, 22.19.0)",
+      "conclusion": "success"
+    },
+    {
+      "name": "package (ubuntu-latest, 24.x)",
+      "conclusion": "success"
+    },
+    {
+      "name": "package (windows-latest, 24.x)",
+      "conclusion": "success"
+    },
+    {
+      "name": "native (windows-latest, 22.19.0)",
+      "conclusion": "success"
+    },
+    {
+      "name": "package (ubuntu-latest, 22.19.0)",
+      "conclusion": "success"
+    },
+    {
+      "name": "native (ubuntu-latest, 24.x)",
+      "conclusion": "success"
+    },
+    {
+      "name": "composition (ubuntu-latest)",
+      "conclusion": "success"
+    }
+  ],
+  "anonymousDownloadHashVerified": true,
+  "releaseUrl": "https://github.com/Soldsix/dsh-qq-chat/releases/tag/v0.3.0-development",
+  "ciUrl": "https://github.com/Soldsix/dsh-qq-chat/actions/runs/42617660636",
+  "host": "DSH 0.2.2-rc.1 / Node >=24.9; Node 22.19 is library compatibility evidence",
+  "realModelApiRequests": 0,
+  "realQqMessagesSent": 0,
+  "productionChanged": false,
+  "personaOrSkillsRead": false,
+  "protectedGroupDataRead": false,
+  "semanticRecallVerified": false,
+  "publicRegistryPublished": false,
+  "evidence": "dsh-qq-chat/evidence/20261109/live-source/release.json",
+  "nativeChecks": 23,
+  "nativeAdapterRequests": 24,
+  "peakConcurrentRequests": 2,
+  "installedFiles": 61,
+  "strictDeclarationInputs": 333,
+  "ancestorDependenciesBorrowed": false,
+  "sourceFieldsAdded": [
+    "scope (optional)",
+    "invocationId (optional)"
+  ],
+  "journalSchemaChanged": false,
+  "retainedSessionLogsRewritten": false
+}
