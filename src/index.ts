@@ -89,8 +89,12 @@ export async function apply(ctx:Context,config:Settings):Promise<void>{
         return'default' as const
       }:undefined
       let observed=false
+      const admission=provider&&message.scope.kind==='group'?(input:typeof message)=>{
+        if(child.get('qqTurnPolicy')!==provider)return true
+        try{return provider.allowReply?.(input)!==false}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-admission',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}return input.directedToBot}
+      }:undefined
       const observe=(result:ChatResult)=>{if(provider&&child.get('qqTurnPolicy')===provider){try{provider.observe(message,result);observed=true}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-observe',error})}catch(observerError){/* Diagnostics do not own the completed result. */}}}}
-      const result=await kernel.submit(message,'live',child.im,signal,'default',observe,routing)
+      const result=await kernel.submit(message,'live',child.im,signal,'default',observe,routing,admission)
       if(!observed)observe(result)
     },()=>true))
   })

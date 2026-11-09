@@ -100,7 +100,7 @@ export function apply(ctx,config){
    assert.equal(state.outputs.length,12)
    checks.push('per-sender-native-session-isolation')
    let guards=0,decisions=0
-   ctx.effect(()=>ctx.provide('qqTurnPolicy',{guard(input){guards++;if(input.messageId==='native-guarded')return'block';if(input.messageId==='native-guard-error')throw Error('Synthetic guard failure');return'allow'},async decide(){decisions++;throw Error('Synthetic classifier failure')},observe(){}}))
+   ctx.effect(()=>ctx.provide('qqTurnPolicy',{guard(input){guards++;if(input.messageId==='native-guarded')return'block';if(input.messageId==='native-guard-error')throw Error('Synthetic guard failure');return'allow'},allowReply(input){return input.messageId!=='native-budgeted'},async decide(input){decisions++;if(input.messageId==='native-budgeted')return'default';throw Error('Synthetic classifier failure')},observe(){}}))
    const guarded=source('native-guarded','90000100','NATIVE_GUARDED')
    await send(guarded);await send(guarded);assert.equal(state.outputs.length,12);assert.equal(guards,1)
    checks.push('native-sender-guard-blocks-explicit-source-once-without-model-work')
@@ -110,6 +110,8 @@ export function apply(ctx,config){
    await send(source('native-classifier-error','90000100','NATIVE_UNQUOTED_CLASSIFIER_ERROR',false));assert.equal(state.outputs.length,14);assert.equal(decisions,1)
    assert.ok(diagnostics.some(item=>item.stage==='turn-policy'));assert.ok(diagnostics.some(item=>item.stage==='turn-policy-guard'))
    checks.push('classifier-failure-is-diagnosed-without-triggering-basic-followup')
+   await send(source('native-budgeted','90000100','NATIVE_BUDGETED_BASIC_FOLLOWUP',false));assert.equal(state.outputs.length,14);assert.equal(decisions,2)
+   checks.push('native-final-admission-limits-built-in-followups-before-model-generation')
    const disabled=await invoke('save',{request:{revision:isolated.revision,patch:{enabled:false}}})
    assert.equal(disabled.runtime,null);assert.equal(disabled.appliedRevision,null)
    assert.equal(ctx.configEditor.entries().find(value=>value.options.id==='qq-chat-control')?.fiber?.uid,controlUid)

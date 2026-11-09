@@ -37,6 +37,18 @@ test('an explicit group mention bypasses an ordinary ignore decision but an admi
  assert.deepEqual((await f.store.receipt(blocked.requestId)).input,bot)
  assert.equal((await f.kernel.submit(bot,'live',f.port,signal,'default',undefined,async()=>{throw Error('duplicate invoked routing')})).status,'duplicate')
 })
+test('final admission covers built-in continuations without charging unrelated or muted sources or replays',async t=>{
+ const f=await fixture(t),signal=new AbortController().signal;let reservations=0
+ const admission=input=>input.directedToBot||++reservations<=1
+ const submit=input=>f.kernel.submit(input,'live',f.port,signal,'default',undefined,async()=> 'default',admission)
+ assert.equal((await submit(message('start'))).status,'responded')
+ assert.equal((await submit(message('unrelated',{sender:'somebody-else',directed:false}))).status,'ignored');assert.equal(reservations,0)
+ const allowed=message('basic-followup',{directed:false});assert.equal((await submit(allowed)).status,'responded');assert.equal(reservations,1)
+ assert.equal((await submit(allowed)).status,'duplicate');assert.equal(reservations,1)
+ assert.equal((await submit(message('limited-followup',{directed:false}))).status,'ignored');assert.equal(reservations,2)
+ assert.equal((await submit(message('explicit-after-limit'))).status,'responded');assert.equal(f.calls.length,3)
+ f.port.availability=async()=> 'muted';assert.equal((await submit(message('muted-followup',{directed:false}))).reason,'muted');assert.equal(reservations,2)
+})
 test('optional per-sender group sessions keep each member in a distinct persistent mapping',async t=>{
  const f=await fixture(t,{config:{isolateGroupSenders:true}})
  const a1=message('isolation-a1',{sender:'alice'}),b1=message('isolation-b1',{sender:'bob'}),a2=message('isolation-a2',{sender:'alice'})

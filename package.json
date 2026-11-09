@@ -1,6 +1,6 @@
 {
   "name": "dsh-qq-chat",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Persistent, scoped DSH conversations over independently installed messaging providers.",
   "type": "module",
   "license": "MIT",

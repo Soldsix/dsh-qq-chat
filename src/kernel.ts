@@ -49,15 +49,16 @@ export class ChatKernel{
    * @param policy - optional routing decision for an unaddressed group source.
    * @param accepted - synchronous observation of a completed model reply accepted by the transport, before journal completion.
    * @param routing - optional group routing invoked only after durable source admission and age validation.
+   * @param admission - optional synchronous reply budget checked after a trigger matches and transport is available.
    * @returns terminal model and delivery outcomes without automatic retry.
    */
-  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default',accepted?: (result:ChatResult)=>void,routing?:Routing):Promise<ChatResult>{
+  submit(input:InboundMessage,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default'='default',accepted?: (result:ChatResult)=>void,routing?:Routing,admission?:(input:InboundMessage)=>boolean):Promise<ChatResult>{
     const id=requestId(input,mode),digest=fingerprint(input)
     if(this.lifetime.signal.aborted||signal.aborted)return Promise.resolve(this.base(id,'cancelled','cancelled'))
     const existing=this.claims.get(id)
     if(existing)return Promise.resolve(this.base(id,existing.fingerprint===digest?'duplicate':'failed',existing.fingerprint===digest?null:'source-conflict'))
     const combined=AbortSignal.any([signal,this.lifetime.signal])
-    const result=this.admit(input,id,digest,mode,port,combined,policy,accepted,routing).catch(error=>{
+    const result=this.admit(input,id,digest,mode,port,combined,policy,accepted,routing,admission).catch(error=>{
       this.lastFailure=error instanceof StoreError?'storage/'+error.code:'runtime/failure'
       return this.base(id,combined.aborted?'cancelled':'failed',combined.aborted?'cancelled':'storage-unavailable')
     })
@@ -72,7 +73,7 @@ export class ChatKernel{
     if(saved){if(saved.scopeKey!==scope||saved.presetId!==preset||saved.mode!==mode||saved.sessionId!==sessionId(key))throw new StoreError('invalid-data');return saved}
     return{mappingId:key,scopeKey:scope,mode,presetId:preset,sessionId:sessionId(key),lastSenderId:null,lastReplyAt:0,lastDelivery:null,createdAt:Date.now()}
   }
-  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default',accepted:((result:ChatResult)=>void)|undefined,routing:Routing|undefined):Promise<ChatResult>{
+  private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default',accepted:((result:ChatResult)=>void)|undefined,routing:Routing|undefined,admission:((input:InboundMessage)=>boolean)|undefined):Promise<ChatResult>{
     const lane=mappingId(this.config.namespace,input.scope,mode,'')
     const shouldReply=async(decision:'reply'|'ignore'|'default'|'block'):Promise<boolean>=>{
       if(decision==='block')return false
@@ -103,6 +104,7 @@ export class ChatKernel{
     let availability:Awaited<ReturnType<DeliveryPort['availability']>>
     try{availability=await port.availability(input.scope,AbortSignal.any([signal,AbortSignal.timeout(this.config.sendTimeoutMs)]))}catch(error){availability='offline'}
     if(availability!=='available')return terminal(this.base(id,'ignored',availability==='muted'?'muted':availability==='disabled'?'disabled':'offline'))
+    if(admission&&!admission(input))return terminal(this.base(id,'ignored','not-directed'))
     const current=this.lanes.get(lane)
     if(this.queued+this.active>=this.config.maxPending||(current?.tasks.length??0)+(current?.running?1:0)>=this.config.maxPendingPerScope){
       const task=this.makeTask(input,id,mode,port,signal,lane,()=>{},accepted)
