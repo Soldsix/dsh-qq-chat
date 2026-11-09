@@ -1,0 +1,30 @@
+{
+  "version": "0.2.2",
+  "sourceCommit": "bdb3266913ceaed369cc2c491f64b83285dc78cf",
+  "sha256": "e9de0477cbdb8d30bf28ba9e485bf1f734e75843f4d940b8b51991b2c5082fa0",
+  "bytes": 76932,
+  "packedFiles": 61,
+  "unitTests": {
+    "node22": 44,
+    "node24": 44
+  },
+  "nativeChecks": 20,
+  "nativeControlledAdapterRequests": 22,
+  "independentConsumer": {
+    "passed": true,
+    "strictDeclarationInputs": 331,
+    "installedFiles": 61,
+    "ancestorDependenciesBorrowed": false
+  },
+  "ci": {
+    "run": 42604797243,
+    "passedJobs": 11
+  },
+  "anonymousDownload": {
+    "passed": true,
+    "identicalToVerifiedCandidate": true
+  },
+  "realModelApiRequests": 0,
+  "qqMessagesSent": 0,
+  "personaSkillsMemoryUntouched": true
+}
