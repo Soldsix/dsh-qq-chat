@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "archives": [
+    {
+      "name": "dsh-im-kit-0.2.1.tgz",
+      "sha256": "48686023b7307e3296d403994ad5cfb5cc7bfa7e4be5ef423af934b5286c40f0"
+    },
+    {
+      "name": "dsh-qq-chat-0.2.3.tgz",
+      "sha256": "7e0b13f702f1d05e2d90c66a9939ea2e23e7111dfa474666ceef0a39e6d5ef42"
+    }
+  ],
+  "installedFilesVerified": 61,
+  "checks": [
+    "native-agent-first-reply",
+    "same-session-unmentioned-followup",
+    "durable-source-replay-does-not-regenerate",
+    "native-reload-resumes-session-and-contact-without-replay",
+    "parallel-independent-conversations",
+    "same-orchestration-local-preview-does-not-publish",
+    "reasoning-is-not-delivered",
+    "native-owner-control-through-src-gateway",
+    "all-owner-operations-refuse-non-owner-even-with-global-policy",
+    "stale-invalid-and-live-destination-edits-refused",
+    "owner-preview-captures-real-outbound-and-durable-id-replay-does-not-regenerate",
+    "native-preview-cancel-joins-http-and-does-not-block-other-conversations",
+    "native-scoped-tool-guard-denies-by-default-allows-explicit-and-denies-preview",
+    "native-idle-eviction-resumes-durable-history",
+    "per-sender-native-session-isolation",
+    "native-sender-guard-blocks-explicit-source-once-without-model-work",
+    "ordinary-explicit-mentions-bypass-intent-even-after-guard-failure",
+    "classifier-failure-is-diagnosed-without-triggering-basic-followup",
+    "native-final-admission-limits-built-in-followups-before-model-generation",
+    "native-restart-and-disable-preserve-independent-control-entry",
+    "native-cli-removal-and-reinstallation-preserve-durable-journal"
+  ],
+  "nativeAdapterRequests": 22,
+  "peakConcurrentRequests": 2,
+  "catalogReads": 0,
+  "sameSessionHistory": true,
+  "reloadHistory": true,
+  "scopeIsolation": true,
+  "normalShutdown": true,
+  "runtimeInSameInstallationGraph": true,
+  "modelBackend": "synthetic loopback Messages HTTP through the native DeepSeek adapter",
+  "realModelApiRequests": 0,
+  "realQqMessagesSent": 0
+}
