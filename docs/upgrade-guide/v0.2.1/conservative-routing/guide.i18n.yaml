@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.1/conservative-routing/guide.md
+/:
+  en: bca0380ff38c7157
+  zh: 271803309695d129
+/conservative-group-routing:
+  en: a938ebf15ce430e5
+  zh: 4a12fe08413b7bf9
+/conservative-group-routing/change:
+  en: 509f40b810da15a4
+  zh: fc68c01d10c002a6
+/conservative-group-routing/migration:
+  en: 4ff8704ad71cd497
+  zh: 7c0a1001fb5e481d

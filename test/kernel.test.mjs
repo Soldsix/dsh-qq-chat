@@ -28,6 +28,15 @@ test('one group reuses its Session for a same-sender followup and ignores unrela
  assert.equal(f.calls[1].map.lastDelivery,'accepted')
  assert.deepEqual(f.sent[1].parts,[{type:'reply',messageId:b.messageId},{type:'text',text:'reply 2'}])
 })
+test('an explicit group mention bypasses an ordinary ignore decision but an admitted sender guard can block it',async t=>{
+ const f=await fixture(t),signal=new AbortController().signal
+ const human=await f.kernel.submit(message('human-explicit'),'live',f.port,signal,'default',undefined,async()=> 'ignore')
+ assert.equal(human.status,'responded')
+ const bot=message('guarded-explicit',{sender:'other-bot'}),blocked=await f.kernel.submit(bot,'live',f.port,signal,'default',undefined,async()=> 'block')
+ assert.equal(blocked.status,'ignored');assert.equal(blocked.modelOutcome,'not-started');assert.equal(f.calls.length,1);assert.equal(f.sent.length,1)
+ assert.deepEqual((await f.store.receipt(blocked.requestId)).input,bot)
+ assert.equal((await f.kernel.submit(bot,'live',f.port,signal,'default',undefined,async()=>{throw Error('duplicate invoked routing')})).status,'duplicate')
+})
 test('optional per-sender group sessions keep each member in a distinct persistent mapping',async t=>{
  const f=await fixture(t,{config:{isolateGroupSenders:true}})
  const a1=message('isolation-a1',{sender:'alice'}),b1=message('isolation-b1',{sender:'bob'}),a2=message('isolation-a2',{sender:'alice'})

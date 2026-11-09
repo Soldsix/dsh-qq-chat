@@ -18,7 +18,7 @@ interface Task{
 }
 interface Lane{readonly tasks:Task[];running:boolean}
 interface Contact{readonly senderId:UserId;readonly at:number}
-type Routing=(input:InboundMessage,signal:AbortSignal)=>Promise<'reply'|'ignore'|'default'>
+type Routing=(input:InboundMessage,signal:AbortSignal)=>Promise<'reply'|'ignore'|'default'|'block'>
 /** Orchestration is shared by actual transport and explicitly isolated text preview. */
 export class ChatKernel{
   private readonly lifetime=new AbortController()
@@ -74,7 +74,8 @@ export class ChatKernel{
   }
   private async admit(input:InboundMessage,id:RequestId,digest:string,mode:ChatMode,port:DeliveryPort,signal:AbortSignal,policy:'reply'|'ignore'|'default',accepted:((result:ChatResult)=>void)|undefined,routing:Routing|undefined):Promise<ChatResult>{
     const lane=mappingId(this.config.namespace,input.scope,mode,'')
-    const shouldReply=async(decision:'reply'|'ignore'|'default'):Promise<boolean>=>{
+    const shouldReply=async(decision:'reply'|'ignore'|'default'|'block'):Promise<boolean>=>{
+      if(decision==='block')return false
       if(input.scope.kind==='private'||input.directedToBot||decision==='reply')return true
       if(decision==='ignore')return false
       if(this.config.trigger!=='followup')return false
@@ -94,10 +95,10 @@ export class ChatKernel{
     const now=Date.now(),sourceTime=input.sentAt>0?Math.min(input.sentAt,input.receivedAt):input.receivedAt
     if(now-sourceTime>this.config.maxSourceAgeMs)return terminal(this.base(id,'ignored','stale'))
     if(routing){
-      policy=await routing(input,signal)
+      const decision=await routing(input,signal)
       if(signal.aborted)return terminal(this.base(id,'cancelled','cancelled'))
       if(Date.now()-sourceTime>this.config.maxSourceAgeMs)return terminal(this.base(id,'ignored','stale'))
-      if(!await shouldReply(policy))return terminal(this.base(id,'ignored','not-directed'))
+      if(!await shouldReply(decision))return terminal(this.base(id,'ignored','not-directed'))
     }
     let availability:Awaited<ReturnType<DeliveryPort['availability']>>
     try{availability=await port.availability(input.scope,AbortSignal.any([signal,AbortSignal.timeout(this.config.sendTimeoutMs)]))}catch(error){availability='offline'}

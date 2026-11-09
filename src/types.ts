@@ -15,6 +15,8 @@ export type MappingId=Branded<'qq-chat.mapping'>
 export type ChatMode='live'|'preview'
 /** Optional live routing provider; default leaves the built-in trigger unchanged. */
 export interface ChatTurnPolicy{
+  /** @param input - fresh, durably admitted group source. @returns block only for an operator-configured sender guard; ordinary explicit mentions must remain allowed. Runs once before intent classification, including explicit mentions. */
+  guard?(input:InboundMessage):'allow'|'block'
   /** @param input - original group source before routing; implementations must bound any retained context. */
   seen?(input:InboundMessage):void
   /** @param input - original source event. @param signal - routing deadline and delivery lifetime; stop owned work when aborted. @returns explicit decision or delegation to the built-in trigger. */

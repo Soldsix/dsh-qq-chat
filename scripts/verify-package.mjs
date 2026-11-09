@@ -34,7 +34,7 @@ export function verifyPair(english,chinese){
 /** Refuse fixture files, local state, undeclared documents and executable application entries. */
 export function verifyFiles(paths){
  const exact=['LICENSE','README.md','README.zh.md','README.i18n.yaml','package.json','cordis.patch.yml']
- for(const path of paths)assert.ok(exact.includes(path)||/^dist\/(?:client\/)?[a-z][a-z-]*\.(?:js|d\.ts)$/.test(path)||/^docs\/upgrade-guide\/v0\.1\.0\/journal-v2\/guide(?:\.md|\.zh\.md|\.i18n\.yaml)$/.test(path),'Unexpected published file '+path)
+ for(const path of paths)assert.ok(exact.includes(path)||/^dist\/(?:client\/)?[a-z][a-z-]*\.(?:js|d\.ts)$/.test(path)||/^docs\/upgrade-guide\/(?:v0\.1\.0\/journal-v2|v0\.2\.1\/conservative-routing)\/guide(?:\.md|\.zh\.md|\.i18n\.yaml)$/.test(path),'Unexpected published file '+path)
  for(const path of [...exact,'dist/index.js','dist/index.d.ts','dist/control.js','dist/control.d.ts','dist/client.js','dist/client/index.d.ts','dist/store-worker.js','docs/upgrade-guide/v0.1.0/journal-v2/guide.md','docs/upgrade-guide/v0.1.0/journal-v2/guide.zh.md','docs/upgrade-guide/v0.1.0/journal-v2/guide.i18n.yaml'])assert.ok(paths.includes(path),'Missing public file '+path)
 }
 

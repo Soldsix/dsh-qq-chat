@@ -108,7 +108,7 @@ try{
   assert.equal(exitCode,undefined,'Native DSH exited before the probe');await delay(30)
  }
  assert.ok(result,'Native chat probe timed out');assert.equal(result.passed,true,JSON.stringify(result.error))
- assert.equal(captures.length,20)
+ assert.equal(captures.length,22)
  const text=value=>JSON.stringify(value.messages)
  assert.ok(text(captures[1]).includes('NATIVE_FIRST_QUESTION')&&text(captures[1]).includes('NATIVE_REPLY_1'))
  assert.ok(text(captures[2]).includes('NATIVE_FIRST_QUESTION')&&text(captures[2]).includes('NATIVE_AFTER_RELOAD'))

@@ -78,13 +78,14 @@ export async function apply(ctx:Context,config:Settings):Promise<void>{
       const routing=provider&&message.scope.kind==='group'?async(_input:typeof message,routingSignal:AbortSignal)=>{
         if(routingSignal.aborted||child.get('qqTurnPolicy')!==provider)return'default' as const
         try{provider.seen?.(message)}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-seen',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}
+        try{if(provider.guard?.(message)==='block')return'block' as const}catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy-guard',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}
         if(message.directedToBot||routingSignal.aborted)return'default' as const
         try{
           return await routingDeadline(routingSignal,spec.queueTimeoutMs,async deadline=>{
             if(await child.im.availability(message.scope,AbortSignal.any([deadline,AbortSignal.timeout(spec.sendTimeoutMs)]))==='available'&&!deadline.aborted&&child.get('qqTurnPolicy')===provider)return provider.decide(message,deadline)
             return'default'
           })
-        }catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}}
+        }catch(error){try{child.emit('qq-chat/diagnostic',{stage:'turn-policy',error})}catch(observerError){/* Diagnostics do not own the incoming message. */}return'ignore' as const}
         return'default' as const
       }:undefined
       let observed=false
