@@ -7,14 +7,15 @@ import type {SessionId} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-agent-preset-registry'
 import type {} from '@deepseek-ai/dsh-session-persistence'
 import type {} from '@deepseek-ai/dsh-tools'
-import type {InboundMessage} from 'dsh-im-kit'
+import type {InboundMessage,ConversationScope} from 'dsh-im-kit'
+import type {InvocationId,RequestAuthority,RequestLease} from 'dsh-im-requests'
 import type {Spec} from './config.ts'
 import type {ChatModelRunner,MappingRecord,ModelInterval,RequestId} from './types.ts'
 
 declare module '@deepseek-ai/dsh-llm'{
   interface MessageSourceMap{
     /** Trusted transport attribution; quoted payload never selects its own actor or destination. */
-    'qq-chat':{readonly kind:'qq-chat';readonly requestId:RequestId;readonly actorId:string}
+    'qq-chat':{readonly kind:'qq-chat';readonly requestId:RequestId;readonly actorId:string;readonly scope?:ConversationScope;readonly invocationId?:InvocationId}
   }
 }
 declare module '@deepseek-ai/cordis'{
@@ -53,7 +54,8 @@ export class DshModelRunner implements ChatModelRunner{
   private timer:ReturnType<typeof setTimeout>|undefined
   private stopping:Promise<void>|undefined
   private lastFailure:string|null=null
-  constructor(private readonly ctx:Context,private readonly config:Spec){}
+  /** @param ctx - native Host services. @param config - resolved deployment settings. @param requests - issuer owned by this chat runtime. */
+  constructor(private readonly ctx:Context,private readonly config:Spec,private readonly requests:RequestAuthority){}
 
   /**
    * Resolve display metadata without exporting the preset document.
@@ -142,11 +144,13 @@ export class DshModelRunner implements ChatModelRunner{
   async run(mapping:MappingRecord,message:InboundMessage,id:RequestId,signal:AbortSignal):Promise<ModelInterval>{
     const entry=await this.acquire(mapping,signal),agent=entry.handle.agent
     const fromOffset=agent.session.seq
+    const requestSignal=AbortSignal.any([signal,this.lifetime.signal])
+    let lease:RequestLease|undefined
     let text='',admitted=false,externalInput=false,completed=false
     let expected:MessageId|undefined
     const releaseEvent=this.ctx.on('session/event',(session,event)=>{
       if(session.id!==mapping.sessionId)return
-      if(event.type==='user/message'&&event.data.id===expected)admitted=true
+      if(event.type==='user/message'&&event.data.id===expected){admitted=true;if(!requestSignal.aborted&&!externalInput)lease?.activate()}
       if(event.type==='assistant/message'){
         if(event.data.interrupted){text='';return}
         const blocks=event.data.message.content
@@ -155,14 +159,16 @@ export class DshModelRunner implements ChatModelRunner{
       }
       if(event.type==='turn/end'){completed=event.data.reason.kind==='completed';if(event.data.reason.kind==='error')this.report('model-failure',event.data.reason.error)}
     })
-    const releaseInbox=this.ctx.on('agent/inbox/inserted',({agent:owner,message:input})=>{if(owner.id===mapping.sessionId&&input.id!==expected)externalInput=true})
+    const releaseInbox=this.ctx.on('agent/inbox/inserted',({agent:owner,message:input})=>{if(owner.id===mapping.sessionId&&input.id!==expected){externalInput=true;lease?.close()}})
     const cancel=()=>{try{agent.cancel({kind:'user'})}catch(error){this.lastFailure='session-cancel-failed'}}
     try{
       if(agent.status!=='idle'||agent.inbox.nextTurn.length||agent.inbox.nextStep.length)return{sessionId:agent.id,text:'',fromOffset,toOffset:agent.session.seq,admitted:false,externalInput:true,completed:false}
       signal.throwIfAborted();this.lifetime.signal.throwIfAborted()
-      const prompt=createUserMessage({source:{kind:'qq-chat',requestId:id,actorId:message.senderId},content:[{type:'text',text:messageText(mapping,message)}]})
+      const invocationId=brandString<InvocationId>('qq-chat-'+id)
+      const prompt=createUserMessage({source:{kind:'qq-chat',requestId:id,actorId:message.senderId,scope:message.scope,invocationId},content:[{type:'text',text:messageText(mapping,message)}]})
       expected=prompt.id
-      const combined=AbortSignal.any([signal,this.lifetime.signal])
+      const combined=requestSignal
+      if(mapping.mode==='live')lease=this.requests.open(agent,{id:invocationId,scope:message.scope,senderId:message.senderId,messageId:message.messageId},combined)
       combined.addEventListener('abort',cancel,{once:true})
       try{
         agent.followup(prompt)
@@ -174,7 +180,7 @@ export class DshModelRunner implements ChatModelRunner{
       finally{combined.removeEventListener('abort',cancel)}
       return{sessionId:agent.id,text,fromOffset,toOffset:agent.session.seq,admitted,externalInput,completed}
     }finally{
-      releaseInbox();releaseEvent();entry.busy=false;entry.usedAt=Date.now()
+      lease?.close();releaseInbox();releaseEvent();entry.busy=false;entry.usedAt=Date.now()
       const slot=this.entries.get(mapping.sessionId);if(slot)slot.busy=false
       this.armIdle()
     }

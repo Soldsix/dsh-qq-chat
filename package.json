@@ -1,6 +1,6 @@
 {
   "name": "dsh-qq-chat",
-  "version": "0.2.3",
+  "version": "0.3.0-development",
   "description": "Persistent, scoped DSH conversations over independently installed messaging providers.",
   "type": "module",
   "license": "MIT",
@@ -69,7 +69,8 @@
   },
   "dependencies": {
     "zod": "4.6.6",
-    "dsh-im-kit": "https://github.com/Soldsix/dsh-im-kit/releases/download/v0.2.1/dsh-im-kit-0.2.1.tgz"
+    "dsh-im-kit": "https://github.com/Soldsix/dsh-im-kit/releases/download/v0.2.1/dsh-im-kit-0.2.1.tgz",
+    "dsh-im-requests": "https://github.com/Soldsix/dsh-im-requests/releases/download/v0.1.0/dsh-im-requests-0.1.0.tgz"
   },
   "devDependencies": {
     "@deepseek-ai/dsh": "0.2.2-rc.1",

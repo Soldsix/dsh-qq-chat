@@ -31,7 +31,7 @@ async function run(argv){
  if(failure)throw failure;assert.equal(code,0,stderr.slice(-1800));return stdout
 }
 const peers=Object.entries(manifest.peerDependencies).filter(([name])=>name!=='dsh-im-kit').map(([name,version])=>name+'@'+version)
-if(!resumed||args.includes('--reinstall'))await run([process.env.npm_execpath,'install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--cache',join(root,'.npm-cache'),archives[1],...peers,'@deepseek-ai/dsh@0.2.2-rc.1','@types/node@24.0.0','@types/react@18.3.28','@types/react-dom@18.3.7'])
+await run([process.env.npm_execpath,'install','--ignore-scripts','--no-audit','--no-fund','--package-lock=false','--cache',join(root,'.npm-cache'),archives[1],...peers,'@deepseek-ai/dsh@0.2.2-rc.1','@types/node@24.0.0','@types/react@18.3.28','@types/react-dom@18.3.7'])
 const installed=await verifyInstalledArchive(archives[1],join(area,'node_modules','dsh-qq-chat'),join(attempt,'installed-files.json'))
 const consumer=join(attempt,'consumer.ts')
 await writeFile(consumer,`import z from '@deepseek-ai/schemastery'

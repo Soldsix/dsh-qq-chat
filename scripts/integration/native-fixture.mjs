@@ -7,5 +7,5 @@ export function apply(ctx){
  ctx.effect(()=>()=>runtime.close())
  ctx.effect(()=>runtime.register({account,async availability(){return'available'},async send(message){outputs.push(structuredClone(message));return{status:'accepted',messageIds:[identifier('im.message','accepted-'+outputs.length)]}},async dispose(){}}))
  ctx.effect(()=>ctx.provide('im',runtime))
- ctx.effect(()=>ctx.provide('qqChatTest',{outputs,account,toolCalls:[],toolRegistrations:[],toolVisibility:[],toolContexts:[]}))
+ ctx.effect(()=>ctx.provide('qqChatTest',{outputs,account,toolCalls:[],toolRegistrations:[],toolVisibility:[],toolContexts:[],attributions:[],sourceEvents:[]}))
 }

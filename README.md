@@ -25,12 +25,12 @@ Keep messaging conversations across DSH restarts, process separate conversations
 
 ### Install and configure
 
-Use DSH **0.2.2-rc.1**, Cordis 4.1, Node **^22.19 or >=24**, and the independent **dsh-im-kit 0.2.1** library. The tested Host and profile dependencies belong to the same DSH installation. Mixed physical installations are not supported by this candidate: this DSH prerelease uses package-local identities for preset scopes. DSH owns model credentials, presets, agents and Session persistence; none are copied into this package.
+Use DSH **0.2.2-rc.1**, Cordis 4.1 and Node **>=24.9** for native profiles. Library-level checks also run on Node 22.19. The pinned **dsh-im-kit 0.2.1** and **dsh-im-requests 0.1.0** libraries are installed automatically. The tested Host and profile dependencies belong to the same DSH installation. Mixed physical installations are unsupported: this DSH prerelease uses package-local identities for preset scopes. DSH owns credentials, presets, agents and Session persistence; none are copied into this package.
 
 Install into an existing DSH profile. The pinned messaging library is fetched automatically from its public GitHub release; no prior library installation is required:
 
 ```text
-dsh plugin --profile MY_PROFILE add https://github.com/Soldsix/dsh-qq-chat/releases/download/v0.2.1/dsh-qq-chat-0.2.1.tgz
+dsh plugin --profile MY_PROFILE add https://github.com/Soldsix/dsh-qq-chat/releases/download/v0.3.0-development/dsh-qq-chat-0.3.0-development.tgz
 ```
 
 Launch the profile through `dsh`. In the native Plugins page, open this bundle's configuration page, choose a preset and model or inherit the Host selection, then enable chat and save. The page reports saved and running revisions separately. Invalid edits retain the draft; restarting retains the journal and Session mappings. The controller remains available when automatic chat is disabled. No standalone application binary or separate settings server is provided.
@@ -56,7 +56,9 @@ Use **Local text preview** on the same page. It uses saved settings, native DSH 
 
 Live messaging optionally consumes `ctx.im` from an independently installed provider such as `dsh-qq-onebot`. Basic group triggers accept transport-confirmed addressing or recent same-sender follow-ups, according to configuration. An optional `qqTurnPolicy` provider may route or ignore otherwise unaddressed group messages; explicit addressing and private messages remain admitted. The original source is unchanged, and provider errors emit diagnostics and suppress unaddressed messages. Private and group scopes, accounts, presets, and preview/live traffic use separate mappings. Multi-person topic attribution and bot-loop control remain incomplete.
 
-Group Sessions are shared by default. Enable `isolateGroupSenders` to give each authenticated sender a separate Session within each group, preset and account; private conversations are unchanged. Enabling starts separate histories and leaves the previous shared Session intact; disabling resumes the retained shared Session. This isolates model Session logs, not public group replies, tool permissions, other plugins, or sender authentication. It does not yet connect history search or inject shared group context into each Session.
+Group Sessions are shared by default. Enable `isolateGroupSenders` to give each authenticated sender a separate Session within each group, preset and account; private conversations are unchanged. Enabling starts separate histories and leaves the previous shared Session intact; disabling resumes the retained shared Session. This isolates model Session logs, not public group replies, other plugins, or sender authentication. Shared public-topic context is not injected into these separate histories.
+
+The live runtime provides `Context.imRequests` from `dsh-im-requests`: a tool can resolve its exact `exec.agent` object to the current admitted sender, conversation and source message. The lease activates after the native user-message event, closes when the interval ends, and revokes on cancellation or another inbox input. Preview, replayed Session metadata, copied objects and agent-ID strings grant no lease. A consuming history tool must still enforce its own permissions and require sender-isolated Sessions; add its name to `allowedTools` separately.
 
 When a turn policy is installed, all group source events are admitted to the local receipt database before policy routing, including events the policy later ignores. Duplicate or expired sources never invoke the policy; unavailable or muted transport skips its decision step. Routing uses the configured queue wait limit; failed or timed-out intent decisions suppress unaddressed sources and emit a diagnostic. Ordinary explicit mentions bypass intent decisions. An optional synchronous `ChatTurnPolicy.guard()` can block configured bot senders even on explicit mentions; it runs once per fresh admitted source before intent, and a thrown guard emits a diagnostic without blocking ordinary explicit mentions. Providers must stop owned work when the supplied signal aborts. The policy can observe fresh group sources without invoking its decision method, so implementations must bound retained context. This receipt database is not a replacement for a group archive or long-term memory. Optional synchronous `allowReply()` runs after a policy or built-in trigger selects a reply and transport is available, before model queueing; use it to apply one shared budget without charging unrelated, muted, duplicate or expired sources. Guarded bot attempts are not charged again by the continuation budget.
 
@@ -74,6 +76,8 @@ The native page exposes every runtime configuration field, including queue/concu
 The default journal is `data/qq-chat/state.sqlite3` inside the current profile. SQLite runs in an owned worker so lock waits do not block the Host event loop. One live process owns the database. An application marker and monotonic schema version refuse foreign or future databases. Schema 1 migrates transactionally to schema 2, preserving source bytes and marking previously unrecorded model outcomes unknown; see the [migration guide](docs/upgrade-guide/v0.1.0/journal-v2/guide.md).
 
 The journal retains admitted original sources, request outcomes, mapping metadata and sending intent. Restart marks pending work interrupted and never automatically replays old replies. Model outcome and delivery outcome remain independent: an accepted failure notice does not imply model success. Unknown delivery is not retried. Session logs remain owned by native DSH persistence and are not rewritten by this bundle.
+
+New `qq-chat` user-message source metadata additionally logs optional `scope` and `invocationId`. Existing records without them remain readable; no Session envelope, journal schema, retained source or migration changes. These logged fields explain a request but never recreate a live authority lease after resume.
 
 -----
 

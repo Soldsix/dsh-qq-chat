@@ -3,6 +3,8 @@ import type {Context} from '@deepseek-ai/cordis'
 import {mkdir} from 'node:fs/promises'
 import {randomUUID} from 'node:crypto'
 import {identifier,type OutboundMessage} from 'dsh-im-kit'
+import {RequestAuthority} from 'dsh-im-requests'
+import type {} from 'dsh-im-requests/cordis'
 import type {} from 'dsh-im-kit/cordis'
 import type {} from '@deepseek-ai/dsh-app-boot'
 import type {} from '@deepseek-ai/dsh-agent'
@@ -53,10 +55,13 @@ declare module '@deepseek-ai/cordis'{interface Context{readonly qqChat:ChatServi
 export async function apply(ctx:Context,config:Settings):Promise<void>{
   const spec=resolveConfig(config,ctx.profileContext.dir)
   if(!spec)return
+  if(ctx.get('imRequests'))throw new Error('Another messaging request authority is already installed')
+  const requests=new RequestAuthority(spec.isolateGroupSenders?'sender':'shared')
+  ctx.effect(()=>{const detach=ctx.provide('imRequests',requests.service);return async()=>{requests.close();await detach()}})
   const journal=await SqliteJournal.open({databasePath:spec.databasePath,busyMs:spec.storageBusyMs,timeoutMs:spec.storageTimeoutMs,startupMs:spec.storageStartupMs,shutdownMs:spec.shutdownTimeoutMs})
   ctx.effect(()=>()=>journal.close())
   await mkdir(spec.workspacePath,{recursive:true,mode:0o700})
-  const runner=new DshModelRunner(ctx,spec),kernel=new ChatKernel(spec,journal,runner)
+  const runner=new DshModelRunner(ctx,spec,requests),kernel=new ChatKernel(spec,journal,runner)
   ctx.effect(()=>()=>kernel.close())
   let transportAttached=false
   const service:ChatService={
